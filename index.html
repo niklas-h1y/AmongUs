@@ -230,7 +230,14 @@ body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.38;ba
 }
 @media(max-height:620px) and (min-width:651px){body{padding:6px}#game-screen{max-height:99svh}#ui-container{min-height:65px;padding:6px 12px}.task-list{font-size:10px}#game-tools{margin-bottom:5px}.tool-btn{padding:5px 9px}}
 
-    </style>
+    
+/* Touch controls */
+#mobile-joystick{display:none;position:absolute;left:18px;bottom:18px;width:142px;height:142px;border:2px solid #d5f5ff88;border-radius:50%;background:radial-gradient(circle,#27485b99,#071522aa);box-shadow:0 5px 22px #0009,inset 0 0 22px #9deaff22;touch-action:none;z-index:5;user-select:none;-webkit-user-select:none}
+#mobile-joystick:before{content:"";position:absolute;inset:18px;border:1px dashed #b9edff55;border-radius:50%}
+#joystick-knob{position:absolute;left:50%;top:50%;width:56px;height:56px;transform:translate(-50%,-50%);border:2px solid #eafaff;border-radius:50%;background:linear-gradient(145deg,#8deaff,#347f9b);box-shadow:0 4px 12px #0009,inset -5px -5px 10px #17465d;pointer-events:none}
+#mobile-hint{display:none;position:absolute;left:18px;bottom:165px;color:#d5f5ff;font:800 9px ui-sans-serif,system-ui;letter-spacing:1px;text-shadow:0 2px 5px #000;z-index:5;pointer-events:none}
+@media(pointer:coarse),(max-width:700px){#mobile-joystick{display:block}#mobile-hint{display:block}#action-btn{right:18px;bottom:20px}#game-wrapper{touch-action:none}}
+</style>
     <!-- Include PeerJS Cloud Library -->
     <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 </head>
@@ -283,7 +290,7 @@ body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.38;ba
                 <div style="padding:12px;background:#1b2b3b;border-radius:7px;border:1px solid #344b60">
                     <label>MAP <select id="map-select" onchange="selectMap(this.value)"><option value="skeld">The Skeld</option><option value="mira">MIRA HQ</option><option value="polus">Polus</option><option value="airship">The Airship</option><option value="fungle">The Fungle</option></select></label>
                     <label style="margin-left:8px">COLOR <select id="color-select" onchange="selectColor(this.value)"><option value="#00adb5">Cyan</option><option value="#e53935">Red</option><option value="#3b6de0">Blue</option><option value="#43a047">Green</option><option value="#f0c928">Yellow</option><option value="#ef8ac8">Pink</option><option value="#eeeeee">White</option><option value="#8e44ad">Purple</option><option value="#f28c28">Orange</option></select></label>
-                    <strong id="lobby-map-name" style="color:#8cecff;display:block;margin-top:12px">THE SKELD</strong><small id="lobby-map-desc" style="color:#9db2c1">Classic ship</small>
+                    <label style="display:block;margin-top:12px;color:#9db2c1;font-size:12px">PLAYER SPEED <select id="speed-select" onchange="setPlayerSpeed(this.value)"><option value="3">Slow</option><option value="4" selected>Normal</option><option value="5">Fast</option><option value="6">Very Fast</option></select></label><strong id="lobby-map-name" style="color:#8cecff;display:block;margin-top:12px">THE SKELD</strong><small id="lobby-map-desc" style="color:#9db2c1">Classic ship</small>
                 </div>
             </section>
         </div>
@@ -316,6 +323,7 @@ body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.38;ba
         </div>
         <div id="game-wrapper">
             <canvas id="gameCanvas" width="800" height="500"></canvas>
+            <div id="mobile-hint">MOVE</div><div id="mobile-joystick" aria-label="Movement joystick"><div id="joystick-knob"></div></div>
             <div id="action-btn" onclick="triggerAction()">USE</div>
             <div id="kill-screen">SHHH! ELIMINATED</div><div id="game-modal"><div class="modal-card" id="modal-content"></div></div>
         </div>
@@ -370,6 +378,32 @@ body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.38;ba
 
         window.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
         window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+
+
+        // Mobile joystick: pointer events work for touch, pen and mouse.
+        const joystick=document.getElementById("mobile-joystick");
+        const joystickKnob=document.getElementById("joystick-knob");
+        const touchMove={x:0,y:0,pointerId:null};
+        function moveJoystick(e){
+          const rect=joystick.getBoundingClientRect(),cx=rect.left+rect.width/2,cy=rect.top+rect.height/2;
+          const max=rect.width*.34;let dx=e.clientX-cx,dy=e.clientY-cy;const len=Math.hypot(dx,dy);
+          if(len>max){dx=dx/len*max;dy=dy/len*max;}
+          touchMove.x=dx/max;touchMove.y=dy/max;
+          joystickKnob.style.left=(50+dx/rect.width*100)+"%";
+          joystickKnob.style.top=(50+dy/rect.height*100)+"%";
+        }
+        function resetJoystick(){
+          touchMove.x=0;touchMove.y=0;touchMove.pointerId=null;
+          joystickKnob.style.left="50%";joystickKnob.style.top="50%";
+        }
+        joystick.addEventListener("pointerdown",e=>{e.preventDefault();touchMove.pointerId=e.pointerId;joystick.setPointerCapture(e.pointerId);moveJoystick(e);});
+        joystick.addEventListener("pointermove",e=>{if(touchMove.pointerId===e.pointerId){e.preventDefault();moveJoystick(e);}});
+        joystick.addEventListener("pointerup",e=>{if(touchMove.pointerId===e.pointerId)resetJoystick();});
+        joystick.addEventListener("pointercancel",resetJoystick);
+        joystick.addEventListener("lostpointercapture",resetJoystick);
+        function setPlayerSpeed(value){
+          const n=Number(value);localPlayer.speed=Number.isFinite(n)?Math.max(2,Math.min(7,n)):4;
+        }
 
         // Generates short 5-character string room identifier code
         function generateShortCode() {
@@ -622,11 +656,13 @@ body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.38;ba
         function updateLogic() {
             if (!gameActive) return;
 
-            let dx = 0; let dy = 0;
-            if (keys['w'] || keys['arrowup']) dy = -localPlayer.speed;
-            if (keys['s'] || keys['arrowdown']) dy = localPlayer.speed;
-            if (keys['a'] || keys['arrowleft']) { dx = -localPlayer.speed; localPlayer.facingLeft = true; }
-            if (keys['d'] || keys['arrowright']) { dx = localPlayer.speed; localPlayer.facingLeft = false; }
+            let moveX = (keys['d']||keys['arrowright']?1:0)-(keys['a']||keys['arrowleft']?1:0);
+            let moveY = (keys['s']||keys['arrowdown']?1:0)-(keys['w']||keys['arrowup']?1:0);
+            moveX += touchMove.x; moveY += touchMove.y;
+            const magnitude=Math.hypot(moveX,moveY);
+            if(magnitude>1){moveX/=magnitude;moveY/=magnitude;}
+            const dx=moveX*localPlayer.speed,dy=moveY*localPlayer.speed;
+            if(dx<-.05)localPlayer.facingLeft=true;else if(dx>.05)localPlayer.facingLeft=false;
 
             localPlayer.x = Math.max(20, Math.min(canvas.width - 20, localPlayer.x + dx));
             localPlayer.y = Math.max(20, Math.min(canvas.height - 20, localPlayer.y + dy));
