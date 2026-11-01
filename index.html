@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#071321">
     <title>Space Imposter Multiplayer</title>
     <style>
         body {
@@ -168,6 +169,67 @@
         @media(max-width:650px){#lobby-screen{padding:14px}.lobby-grid{grid-template-columns:1fr}.lobby-top{align-items:flex-start;flex-direction:column}#lobby-scene{height:190px}}
 
 #game-tools{width:800px;display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin:0 0 8px}.tool-btn{background:#203447;color:#eaf7ff;border:1px solid #658197;border-radius:5px;padding:7px 10px;font:bold 11px monospace;cursor:pointer}.tool-btn.danger{background:#842d35}#game-modal{display:none;position:absolute;inset:0;background:#02070bea;z-index:12;align-items:center;justify-content:center;padding:18px;box-sizing:border-box}.modal-card{width:min(520px,95%);background:#142435;border:2px solid #6c879c;border-radius:12px;padding:20px;box-shadow:0 0 35px #000}.modal-card h2{color:#8cecff;margin:0 0 12px}.modal-card p{color:#c3d4df;line-height:1.5}.vote-btn{background:#263f53;color:white;border:1px solid #7794a8;padding:10px 14px;border-radius:6px;cursor:pointer;margin:4px}#map-select,#color-select{background:#101d2b;color:white;border:1px solid #60798d;padding:7px;border-radius:5px}@media(max-width:850px){#ui-container,#game-tools{width:96vw;box-sizing:border-box}#game-wrapper{width:96vw;height:auto;aspect-ratio:8/5}#gameCanvas{width:100%;height:100%}}
+    
+/* 2026 visual overhaul: polished sci-fi lobby, responsive HUD and tactile controls */
+:root{--ui-cyan:#8deaff;--ui-glass:rgba(10,22,36,.88);--ui-line:rgba(151,211,235,.34);--ui-gold:#ffd978}
+*{box-sizing:border-box}
+body{min-height:100svh;height:100svh;padding:18px;background:radial-gradient(ellipse at 50% 110%,#163c55 0%,transparent 48%),radial-gradient(ellipse at 12% 12%,#1b344e 0%,transparent 36%),linear-gradient(145deg,#050a13,#0b1725 58%,#07101c);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;letter-spacing:.15px}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.38;background-image:radial-gradient(1px 1px at 12% 22%,#fff 99%,transparent),radial-gradient(1px 1px at 72% 16%,#b8eaff 99%,transparent),radial-gradient(2px 2px at 88% 72%,#fff 99%,transparent),radial-gradient(1px 1px at 33% 81%,#b8eaff 99%,transparent);background-size:190px 170px,230px 210px,310px 290px,260px 240px}
+#menu-screen{position:relative;z-index:1;width:min(460px,94vw);padding:34px 34px 26px;border:1px solid #6b8ba1;border-radius:22px;background:linear-gradient(155deg,rgba(30,52,72,.97),rgba(8,17,29,.98) 68%);box-shadow:0 28px 80px #000b,inset 0 1px #ffffff20;text-align:center;overflow:hidden}
+#menu-screen:before{content:"";position:absolute;inset:0 0 auto;height:5px;background:linear-gradient(90deg,#ff5a5f,#ffd166,#55d6be,#66b6ff,#b28dff)}
+#menu-screen:after{content:"";position:absolute;width:230px;height:230px;right:-140px;top:70px;border:1px solid #8deaff25;border-radius:50%;box-shadow:0 0 0 18px #8deaff08,0 0 0 38px #8deaff06;pointer-events:none}
+.menu-hero{height:150px;position:relative;margin:-4px auto 12px;display:grid;place-items:center}
+.menu-planet{width:96px;height:116px;border:5px solid #101b28;border-radius:36px 36px 30px 30px;background:linear-gradient(135deg,#f04c59,#a91632);box-shadow:inset -13px -9px #610d2644,0 18px 28px #0008;position:relative;transform:rotate(-8deg)}
+.menu-planet:before{content:"";position:absolute;right:-24px;top:25px;width:55px;height:35px;border:5px solid #101b28;border-radius:22px;background:linear-gradient(145deg,#d8fbff,#5c9db8 65%,#286078);box-shadow:inset -5px -4px #173f59}
+.menu-planet:after{content:"";position:absolute;left:15px;bottom:-15px;width:27px;height:22px;border:5px solid #101b28;border-radius:8px;background:#b52a42;box-shadow:39px 0 #b52a42,39px 0 0 5px #101b28}
+#menu-screen h1{position:relative;z-index:1;font-family:Impact,"Arial Narrow",system-ui,sans-serif;font-size:clamp(30px,7vw,42px)!important;letter-spacing:3px!important;color:#fff!important;text-shadow:0 3px 0 #8e1c31,0 7px 20px #000b;margin:0 0 7px!important}
+.menu-subtitle{color:#9eb8c9;font-size:11px;font-weight:800;letter-spacing:3px;margin-bottom:18px}
+.menu-input{width:100%;height:48px;margin:8px 0;padding:0 16px;border:1px solid #58758a;border-radius:9px;background:#071321;color:#f4fbff;font:700 14px inherit;letter-spacing:1px;outline:none;transition:.2s}
+.menu-input:focus{border-color:#8deaff;box-shadow:0 0 0 3px #67dfff20}
+.btn-main{position:relative;width:100%;min-height:48px;margin:7px 0;padding:13px 18px;border:1px solid #ffffff30;border-radius:9px;background:linear-gradient(#36c979,#16864e);box-shadow:0 4px 0 #075b37,0 9px 20px #0004;color:white;font-size:13px;font-weight:900;letter-spacing:1.4px;transition:transform .14s,filter .14s}
+.btn-main:hover{background:linear-gradient(#4be58b,#1b9b5d);filter:brightness(1.08);transform:translateY(-2px)}
+.btn-main:active{transform:translateY(2px);box-shadow:0 2px 0 #075b37}
+.btn-sec{background:linear-gradient(#26c8df,#087c9e);box-shadow:0 4px 0 #07516b,0 9px 20px #0004}
+#menu-screen>div[style*="border-top"]{position:relative;z-index:1;margin:16px 0!important;padding-top:15px!important;border-color:#8baec025!important}
+#menu-status{font-size:12px!important;font-weight:700;letter-spacing:.4px}
+#lobby-screen{position:relative;z-index:1;width:min(980px,96vw);max-height:94svh;overflow:auto;padding:26px;background:linear-gradient(145deg,#1a3044f5,#081421fa);border:1px solid #6b8ba1;border-radius:20px;box-shadow:0 28px 80px #000b,inset 0 1px #ffffff20}
+.lobby-top{border-color:#8deaff35}.lobby-top h2{font-size:23px;letter-spacing:3px;text-shadow:0 2px 14px #49cfff55}
+.lobby-panel{background:linear-gradient(145deg,#172b3d,#0c1b2a);border:1px solid #58758a;border-radius:13px;box-shadow:inset 0 1px #ffffff0b}
+.lobby-panel h3{color:#d5eafa;letter-spacing:2px}
+#lobby-scene{background:radial-gradient(ellipse at 50% 100%,#3d7180,#1a394d 55%,#0b1b2b);border:1px solid #7294a8;box-shadow:inset 0 0 50px #0008}
+.lobby-player{background:#0d1c2b;border-color:#405b70;border-radius:9px}
+.lobby-start,.lobby-back{border-radius:9px;font-weight:900;letter-spacing:1px;min-height:44px}
+#game-screen{position:relative;z-index:1;width:min(1000px,98vw);max-height:96svh;overflow:auto;align-items:stretch}
+#ui-container{width:100%;min-height:90px;padding:13px 17px;margin-bottom:10px;border:1px solid #64859b;border-radius:12px;background:linear-gradient(110deg,#172d40f2,#091725f2);box-shadow:0 8px 24px #0006}
+.task-list{font:600 12px/1.65 ui-sans-serif,system-ui,sans-serif;color:#b8f7cb}
+#role-title{display:inline-block;margin-bottom:4px;color:#8deaff;font-size:12px;letter-spacing:1.5px}
+#status-msg{color:#ffdf91;font-size:12px;font-weight:700}
+#game-tools{width:100%;gap:8px;margin-bottom:10px}
+.tool-btn{padding:9px 13px;border:1px solid #6b8ba1;border-radius:8px;background:linear-gradient(#29485f,#172e42);font:800 11px ui-sans-serif,system-ui,sans-serif;letter-spacing:.7px;box-shadow:0 3px 0 #07111b;transition:.15s}
+.tool-btn:hover{filter:brightness(1.25);transform:translateY(-1px)}
+.tool-btn.danger{background:linear-gradient(#bd4550,#742532);border-color:#e58b91}
+#game-wrapper{width:100%;height:auto;aspect-ratio:8/5;border:2px solid #7696aa;border-radius:13px;overflow:hidden;background:#050b12;box-shadow:0 18px 45px #0009;touch-action:none}
+#gameCanvas{width:100%;height:100%;object-fit:contain}
+#action-btn{width:clamp(66px,10vw,88px);height:clamp(66px,10vw,88px);right:clamp(12px,2vw,22px);bottom:clamp(12px,2vw,22px);border:3px solid #f5fbff;border-radius:50%;font:900 13px ui-sans-serif,system-ui,sans-serif;box-shadow:0 5px 0 #0008,0 0 24px #ffffff22;letter-spacing:1px}
+#game-modal{backdrop-filter:blur(7px)}
+.modal-card{border:1px solid #8bb4c9;border-radius:16px;background:linear-gradient(145deg,#1b354a,#091725);box-shadow:0 25px 70px #000c}
+.modal-card h2{font-size:23px;letter-spacing:2px}
+.vote-btn{border:1px solid #7697aa;border-radius:8px;background:linear-gradient(#34566e,#1b354a);font-weight:800}
+#kill-screen{font-family:Impact,system-ui,sans-serif;text-shadow:0 5px 15px #0008}
+@media(max-width:650px){
+ body{padding:8px;justify-content:flex-start}
+ #menu-screen{margin:auto;padding:27px 20px 20px}
+ .menu-hero{height:118px}.menu-planet{transform:scale(.82) rotate(-8deg)}
+ #lobby-screen{margin:auto;padding:15px}
+ #game-screen{margin:auto}
+ #ui-container{gap:8px;padding:9px;font-size:11px}
+ .task-list{font-size:10px}
+ #game-tools{gap:5px}
+ .tool-btn{flex:1 1 28%;padding:9px 5px;font-size:10px}
+ #game-wrapper{border-radius:8px}
+}
+@media(max-height:620px) and (min-width:651px){body{padding:6px}#game-screen{max-height:99svh}#ui-container{min-height:65px;padding:6px 12px}.task-list{font-size:10px}#game-tools{margin-bottom:5px}.tool-btn{padding:5px 9px}}
+
     </style>
     <!-- Include PeerJS Cloud Library -->
     <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
@@ -176,6 +238,8 @@
 
     <!-- MAIN MENU SCREEN -->
     <div id="menu-screen">
+        <div class="menu-hero" aria-hidden="true"><div class="menu-planet"></div></div>
+        <div class="menu-subtitle">A CREW AMONG THE STARS · FIND THE IMPOSTOR</div>
         <h1 style="color: #ff3333; margin: 0 0 20px 0; letter-spacing: 2px;">SPACE IMPOSTER</h1>
         <input type="text" id="username-input" class="menu-input" placeholder="ENTER NAME" maxlength="10" value="Crewmate">
         
