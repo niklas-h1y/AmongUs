@@ -167,6 +167,7 @@
         .lobby-start:hover{background:#32c96c}.lobby-back{background:#344657;color:white;border:1px solid #64798b;border-radius:6px;padding:11px 18px;cursor:pointer}
         @media(max-width:650px){#lobby-screen{padding:14px}.lobby-grid{grid-template-columns:1fr}.lobby-top{align-items:flex-start;flex-direction:column}#lobby-scene{height:190px}}
 
+#game-tools{width:800px;display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin:0 0 8px}.tool-btn{background:#203447;color:#eaf7ff;border:1px solid #658197;border-radius:5px;padding:7px 10px;font:bold 11px monospace;cursor:pointer}.tool-btn.danger{background:#842d35}#game-modal{display:none;position:absolute;inset:0;background:#02070bea;z-index:12;align-items:center;justify-content:center;padding:18px;box-sizing:border-box}.modal-card{width:min(520px,95%);background:#142435;border:2px solid #6c879c;border-radius:12px;padding:20px;box-shadow:0 0 35px #000}.modal-card h2{color:#8cecff;margin:0 0 12px}.modal-card p{color:#c3d4df;line-height:1.5}.vote-btn{background:#263f53;color:white;border:1px solid #7794a8;padding:10px 14px;border-radius:6px;cursor:pointer;margin:4px}#map-select,#color-select{background:#101d2b;color:white;border:1px solid #60798d;padding:7px;border-radius:5px}@media(max-width:850px){#ui-container,#game-tools{width:96vw;box-sizing:border-box}#game-wrapper{width:96vw;height:auto;aspect-ratio:8/5}#gameCanvas{width:100%;height:100%}}
     </style>
     <!-- Include PeerJS Cloud Library -->
     <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
@@ -216,8 +217,9 @@
                 <div class="lobby-hint" id="lobby-status">Waiting for another crewmate to connect…</div>
                 <h3 style="margin-top:22px">SELECTED MAP</h3>
                 <div style="padding:12px;background:#1b2b3b;border-radius:7px;border:1px solid #344b60">
-                    <strong style="color:#8cecff">THE ORBITAL</strong><br>
-                    <small style="color:#9db2c1">7 sectors · central hub · maintenance routes</small>
+                    <label>MAP <select id="map-select" onchange="selectMap(this.value)"><option value="skeld">The Skeld</option><option value="mira">MIRA HQ</option><option value="polus">Polus</option><option value="airship">The Airship</option><option value="fungle">The Fungle</option></select></label>
+                    <label style="margin-left:8px">COLOR <select id="color-select" onchange="selectColor(this.value)"><option value="#00adb5">Cyan</option><option value="#e53935">Red</option><option value="#3b6de0">Blue</option><option value="#43a047">Green</option><option value="#f0c928">Yellow</option><option value="#ef8ac8">Pink</option><option value="#eeeeee">White</option><option value="#8e44ad">Purple</option><option value="#f28c28">Orange</option></select></label>
+                    <strong id="lobby-map-name" style="color:#8cecff;display:block;margin-top:12px">THE SKELD</strong><small id="lobby-map-desc" style="color:#9db2c1">Classic ship</small>
                 </div>
             </section>
         </div>
@@ -234,7 +236,7 @@
                 <strong id="role-title">ROLE: CREWMATE</strong>
                 <div id="task-0" class="task-item">• Calibrate Upper Engine (0%)</div>
                 <div id="task-1" class="task-item">• Swipe Card in Admin (0%)</div>
-                <div id="task-2" class="task-item">• Fix Wiring in Electrical (0%)</div>
+                <div id="task-2" class="task-item"></div><div id="task-3" class="task-item"></div><div id="task-4" class="task-item"></div><div id="task-5" class="task-item"></div><div id="task-6" class="task-item"></div>
             </div>
             <div style="text-align: right; color: #00adb5; font-size: 14px;">
                 <strong id="lobby-id-display">ROOM: LOCAL</strong><br>
@@ -243,10 +245,15 @@
             </div>
         </div>
 
+        <div id="game-tools">
+            <button class="tool-btn" onclick="openShipMap()">MAP [TAB]</button><button class="tool-btn" onclick="reportBody()">REPORT [R]</button>
+            <button class="tool-btn" onclick="callMeeting()">EMERGENCY [Q]</button><button class="tool-btn" onclick="showVitals()">VITALS</button>
+            <button class="tool-btn danger" onclick="openSabotage()">SABOTAGE</button><button class="tool-btn" onclick="sendQuickChat()">QUICK CHAT</button>
+        </div>
         <div id="game-wrapper">
             <canvas id="gameCanvas" width="800" height="500"></canvas>
             <div id="action-btn" onclick="triggerAction()">USE</div>
-            <div id="kill-screen">SHHH! ELIMINATED</div>
+            <div id="kill-screen">SHHH! ELIMINATED</div><div id="game-modal"><div class="modal-card" id="modal-content"></div></div>
         </div>
     </div>
 
@@ -271,25 +278,27 @@
         const stars = [];
         for(let i=0; i<60; i++) stars.push({x: Math.random() * canvas.width, y: Math.random() * canvas.height, size: Math.random() * 2});
 
-        // Environment configuration
-        const rooms = [
-            { name: "Upper Engine", x: 35, y: 35, w: 175, h: 112, color: "#263746", taskX: 85, taskY: 83, taskDone: false, taskProgress: 0 },
-            { name: "MedBay", x: 265, y: 35, w: 155, h: 112, color: "#24404a" },
-            { name: "Security", x: 610, y: 35, w: 155, h: 112, color: "#293548" },
-            { name: "Cafeteria", x: 285, y: 185, w: 235, h: 130, color: "#3b3c43" },
-            { name: "Electrical", x: 35, y: 330, w: 175, h: 135, color: "#253b42", taskX: 115, taskY: 395, taskDone: false, taskProgress: 0 },
-            { name: "Storage", x: 285, y: 365, w: 155, h: 100, color: "#3b342b" },
-            { name: "Admin", x: 565, y: 330, w: 200, h: 135, color: "#293b4a", taskX: 665, taskY: 395, taskDone: false, taskProgress: 0 }
-        ];
-        const corridors = [
-            [122,147,122,260],[210,90,265,90],[420,90,610,90],
-            [342,147,342,185],[520,250,685,250],[122,260,122,330],
-            [210,395,285,415],[440,415,565,395],[685,147,685,330],
-            [402,315,402,365]
-        ];
-        const decor = Array.from({length:34}, (_,i) => ({
-            x: 18 + (i*71)%760, y: 18 + (i*43)%460, r: 1 + (i%3)
-        }));
+        // Five selectable map layouts with room-specific geometry and task stations.
+        const mapCatalog={
+          skeld:{name:"The Skeld",desc:"Classic spaceship · Cafeteria · Reactor",rooms:[["Cafeteria",285,185,235,130],["Upper Engine",35,35,175,112],["MedBay",265,35,155,112],["Security",610,35,155,112],["Electrical",35,330,175,135],["Storage",285,365,155,100],["Admin",565,330,200,135],["Lower Engine",35,185,175,112],["Reactor",610,185,155,112]],links:[[122,147,122,185],[122,297,122,330],[210,90,265,90],[420,90,610,90],[342,147,342,185],[520,250,610,250],[685,147,685,185],[685,297,685,330],[210,395,285,415],[440,415,565,395]]},
+          mira:{name:"MIRA HQ",desc:"High-altitude station · Greenhouse · Decontamination",rooms:[["Launchpad",35,35,175,112],["MedBay",300,35,170,112],["Greenhouse",590,35,175,112],["Cafeteria",300,185,220,125],["Office",35,185,175,112],["Laboratory",590,185,175,112],["Reactor",35,350,175,115],["Admin",300,350,220,115],["Communications",590,350,175,115]],links:[[122,147,122,185],[122,297,122,350],[210,90,300,90],[470,90,590,90],[385,147,385,185],[520,250,590,250],[210,407,300,407],[520,407,590,407],[385,310,385,350]]},
+          polus:{name:"Polus",desc:"Frozen outpost · Specimen · Dropship",rooms:[["Dropship",35,35,175,112],["Electrical",300,35,170,112],["Specimen",590,35,175,112],["Office",300,185,220,125],["O2",35,185,175,112],["Laboratory",590,185,175,112],["Storage",35,350,175,115],["Admin",300,350,220,115],["Security",590,350,175,115]],links:[[122,147,122,185],[122,297,122,350],[210,90,300,90],[470,90,590,90],[385,147,385,185],[520,250,590,250],[210,407,300,407],[520,407,590,407],[385,310,385,350]]},
+          airship:{name:"The Airship",desc:"Huge airship · Records · Kitchen · Vault",rooms:[["Cockpit",35,35,175,112],["Viewing Deck",300,35,170,112],["Brig",590,35,175,112],["Meeting Room",300,185,220,125],["Records",35,185,175,112],["Kitchen",590,185,175,112],["Vault",35,350,175,115],["Electrical",300,350,220,115],["Cargo Bay",590,350,175,115]],links:[[122,147,122,185],[122,297,122,350],[210,90,300,90],[470,90,590,90],[385,147,385,185],[520,250,590,250],[210,407,300,407],[520,407,590,407],[385,310,385,350]]},
+          fungle:{name:"The Fungle",desc:"Jungle island · Camp · Beach · Lookout",rooms:[["Dropship",35,35,175,112],["Camp",300,35,170,112],["Beach",590,35,175,112],["Jungle",300,185,220,125],["Kitchen",35,185,175,112],["Greenhouse",590,185,175,112],["Mining Pit",35,350,175,115],["Laboratory",300,350,220,115],["Lookout",590,350,175,115]],links:[[122,147,122,185],[122,297,122,350],[210,90,300,90],[470,90,590,90],[385,147,385,185],[520,250,590,250],[210,407,300,407],[520,407,590,407],[385,310,385,350]]}
+        };
+        let currentMap="skeld",rooms=[],corridors=[];
+        const taskNames=["Calibrate Distributor","Swipe Card","Fix Wiring","Align Engine Output","Upload Data","Prime Shields","Clear Asteroids","Start Reactor","Inspect Samples","Unlock Manifolds","Chart Course","Stabilize Steering","Fuel Engines","Polish Ruby","Record Temperature"];
+        function loadMap(id){
+          currentMap=mapCatalog[id]?id:"skeld";const m=mapCatalog[currentMap];
+          rooms=m.rooms.map((r,i)=>({name:r[0],x:r[1],y:r[2],w:r[3],h:r[4],color:["#263746","#24404a","#293548","#3b3c43","#253b42","#3b342b","#293b4a"][i%7],taskX:r[1]+r[3]*.5,taskY:r[2]+r[4]*.62,taskDone:false,taskProgress:0,taskName:taskNames[(i+Object.keys(mapCatalog).indexOf(currentMap)*2)%taskNames.length]}));
+          corridors=m.links;renderTaskList();
+          const n=document.getElementById("lobby-map-name"),d=document.getElementById("lobby-map-desc");if(n)n.innerText=m.name.toUpperCase();if(d)d.innerText=m.desc;
+        }
+        function selectMap(id){loadMap(id);}
+        function selectColor(color){localPlayer.color=color;}
+        function renderTaskList(){for(let i=0;i<7;i++){const e=document.getElementById("task-"+i);if(!e)continue;const r=rooms[i];e.innerText=r?(r.taskDone?"✓ ":"• ")+r.taskName+" — "+r.name+" ("+Math.floor(r.taskProgress)+"%)":"";e.classList.toggle("done",!!(r&&r.taskDone));}}
+        const decor=Array.from({length:46},(_,i)=>({x:18+(i*71)%760,y:18+(i*43)%460,r:1+i%3}));
+        loadMap("skeld");
 
         // Player models
         const localPlayer = { x: 400, y: 120, radius: 16, speed: 4, color: '#00adb5', visorColor: '#a6e3e9', facingLeft: false, name: 'Player', role: 'crewmate' };
@@ -314,6 +323,7 @@
             document.getElementById('lobby-screen').style.display = 'block';
             document.getElementById('lobby-code').innerText = document.getElementById('lobby-id-display').innerText;
             refreshLobbyPlayers();
+            document.getElementById('map-select').value=currentMap;
         }
 
         function refreshLobbyPlayers() {
@@ -358,6 +368,7 @@
 
         function startPractice() {
             isPractice = true;
+            loadMap(document.getElementById('map-select').value);
             localPlayer.name = document.getElementById('username-input').value || 'Crewmate';
             localPlayer.role = 'crewmate';
             remotePlayer.name = 'Imposter Bot';
@@ -418,6 +429,7 @@
                 conn.on('open', () => {
                     isMultiplayer = true;
                     isHost = false;
+                    loadMap(document.getElementById('map-select').value);
                     localPlayer.role = 'imposter'; // Joining player defaults to tracker imposter
                     localPlayer.color = '#ff3333';
                     remotePlayer.color = '#00adb5';
@@ -455,17 +467,21 @@
                     remotePlayer.x = data.x;
                     remotePlayer.y = data.y;
                     remotePlayer.facingLeft = data.facingLeft;
+                    remotePlayer.dead = !!data.dead;
                 }
                 else if (data.type === 'task') {
                     rooms[data.idx].taskProgress = data.progress;
                     rooms[data.idx].taskDone = data.done;
                     let el = document.getElementById(`task-${data.idx}`);
-                    if (data.done) el.classList.add('done');
-                    el.innerText = `• ${data.idx==0?'Calibrate Upper Engine':data.idx==1?'Swipe Card in Admin':'Fix Wiring in Electrical'} (${Math.floor(data.progress)}%)`;
+                    renderTaskList();
                 }
                 else if (data.type === 'kill') {
-                    triggerKillSequence();
+                    bodyPosition={x:remotePlayer.x,y:remotePlayer.y};remotePlayer.dead=true;triggerKillSequence();
                 }
+                else if(data.type==='meeting'){openMeeting(data.caller);}
+                else if(data.type==='vote'){receiveVote(data.vote);}
+                else if(data.type==='sabotage'){activeSabotage=data.kind;sabotageUntil=Date.now()+30000;}
+                else if(data.type==='chat'){statusMsg.innerText=remotePlayer.name+': '+data.message;}
             });
         }
 
@@ -475,7 +491,8 @@
                     type: 'sync',
                     x: localPlayer.x,
                     y: localPlayer.y,
-                    facingLeft: localPlayer.facingLeft
+                    facingLeft: localPlayer.facingLeft,
+                    dead: !!localPlayer.dead
                 });
             }
         }
@@ -610,7 +627,7 @@
             }
 
             // Process game completion bounds
-            if (rooms.every(r => r.taskDone)) {
+            if (rooms.filter(r=>r.taskDone).length >= 5) {
                 gameActive = false;
                 statusMsg.innerText = "All component matrices operational! Crewmate victory achieved.";
             }
@@ -673,8 +690,70 @@
             if(remotePlayer.active){let impX=650+(remotePlayer.x/canvas.width)*120+7,impY=15+(remotePlayer.y/canvas.height)*80+7;ctx.fillStyle=remotePlayer.color;ctx.beginPath();ctx.arc(impX,impY,3,0,2*Math.PI);ctx.fill();}
         }
 
+
+        // Extended game systems: map, tasks, vents, reports, meetings, sabotage, vitals and chat.
+        let killReadyAt=0,bodyPosition=null,activeSabotage="",sabotageUntil=0,meetingOpen=false,votes={};
+        function showModal(html){document.getElementById("modal-content").innerHTML=html;document.getElementById("game-modal").style.display="flex";}
+        function hideModal(){document.getElementById("game-modal").style.display="none";}
+        function openShipMap(){showModal("<h2>"+mapCatalog[currentMap].name.toUpperCase()+" MAP</h2><p>"+rooms.map(r=>r.name).join(" · ")+"</p><p>Glowing station markers show task locations. Red grates mark vents.</p><button class='vote-btn' onclick='hideModal()'>CLOSE</button>");}
+        function showVitals(){showModal("<h2>VITALS</h2><p>YOU: "+(localPlayer.dead?"GHOST":"ALIVE")+"</p><p>"+escapeLobbyText(remotePlayer.name)+": "+(remotePlayer.dead?"SIGNAL LOST":"SIGNAL ACTIVE")+"</p><button class='vote-btn' onclick='hideModal()'>CLOSE</button>");}
+        function sendQuickChat(){const m=prompt("Quick chat message (60 characters max):");if(!m)return;const msg=m.slice(0,60);statusMsg.innerText="You: "+msg;if(isMultiplayer&&conn&&conn.open)conn.send({type:"chat",message:msg});}
+        function openSabotage(){if(localPlayer.role!=="imposter"){statusMsg.innerText="Only the impostor can sabotage.";return;}showModal("<h2>SABOTAGE</h2><p>Choose a system to disrupt.</p>"+["lights","oxygen","reactor","communications","doors"].map(k=>"<button class='vote-btn' onclick=\"activateSabotage('"+k+"')\">"+k.toUpperCase()+"</button>").join("")+"<button class='vote-btn' onclick='hideModal()'>CANCEL</button>");}
+        function activateSabotage(kind){activeSabotage=kind;sabotageUntil=Date.now()+30000;if(isMultiplayer&&conn&&conn.open)conn.send({type:"sabotage",kind});hideModal();statusMsg.innerText="SABOTAGE: "+kind.toUpperCase()+" — repair it quickly!";}
+        function checkSabotage(){if(activeSabotage&&Date.now()>sabotageUntil){activeSabotage="";gameActive=false;statusMsg.innerText="Sabotage timer expired — impostor wins.";}}
+        function callMeeting(){if(!gameActive)return;if(isMultiplayer&&conn&&conn.open)conn.send({type:"meeting",caller:localPlayer.name});openMeeting(localPlayer.name);}
+        function reportBody(){if(!gameActive)return;if(bodyPosition&&Math.hypot(localPlayer.x-bodyPosition.x,localPlayer.y-bodyPosition.y)<70){if(isMultiplayer&&conn&&conn.open)conn.send({type:"meeting",caller:localPlayer.name});openMeeting(localPlayer.name);bodyPosition=null;}else statusMsg.innerText="No reportable body nearby.";}
+        function openMeeting(caller){if(meetingOpen)return;meetingOpen=true;gameActive=false;votes={};showModal("<h2>EMERGENCY MEETING</h2><p>"+escapeLobbyText(caller)+" called a meeting. Who is the impostor?</p><button class='vote-btn' onclick=\"castVote('skip')\">SKIP</button><button class='vote-btn' onclick=\"castVote('player')\">VOTE PLAYER</button><p id='vote-status'>Discuss and vote.</p>");}
+        function castVote(v){votes.local=v;if(isMultiplayer&&conn&&conn.open)conn.send({type:"vote",vote:v});if(!isMultiplayer||isPractice)resolveVotes();else document.getElementById("vote-status").innerText="Vote submitted. Waiting for the other player.";}
+        function receiveVote(v){votes.remote=v;if(votes.local)resolveVotes();}
+        function resolveVotes(){const ejected=votes.local==="player"&&(votes.remote==="player"||isPractice);showModal("<h2>VOTING RESULTS</h2><p>"+(ejected?"The impostor was ejected. CREWMATES WIN!":"No ejection. The round continues.")+"</p><button class='vote-btn' onclick='finishMeeting("+ejected+")'>CONTINUE</button>");}
+        function finishMeeting(won){meetingOpen=false;hideModal();if(won){gameActive=false;statusMsg.innerText="Crewmates win!";}else{gameActive=true;statusMsg.innerText="Meeting ended. Complete your tasks.";}}
+        function nearestVent(){let best=null,dist=1e9;rooms.forEach((r,i)=>{const x=r.x+17,y=r.y+r.h-14,d=Math.hypot(localPlayer.x-x,localPlayer.y-y);if(d<dist){dist=d;best={x,y,i};}});return dist<34?best:null;}
+        function triggerAction(){
+          if(!gameActive)return;
+          if(localPlayer.role==="imposter"){
+            if(Date.now()<killReadyAt){statusMsg.innerText="Kill cooldown: "+Math.ceil((killReadyAt-Date.now())/1000)+"s";return;}
+            if(remotePlayer.active&&!remotePlayer.dead&&Math.hypot(localPlayer.x-remotePlayer.x,localPlayer.y-remotePlayer.y)<48){
+              if(isMultiplayer&&conn&&conn.open)conn.send({type:"kill"});
+              bodyPosition={x:remotePlayer.x,y:remotePlayer.y};remotePlayer.dead=true;killReadyAt=Date.now()+18000;statusMsg.innerText="Eliminated. Report the body before it is found.";return;
+            }
+            const v=nearestVent();if(v){const dest=rooms[(v.i+3)%rooms.length];localPlayer.x=dest.x+dest.w/2;localPlayer.y=dest.y+dest.h/2;statusMsg.innerText="Vent travel complete.";return;}
+          }else{
+            let i=rooms.findIndex(r=>!r.taskDone&&Math.hypot(localPlayer.x-r.taskX,localPlayer.y-r.taskY)<48);
+            if(i>=0){const r=rooms[i];r.taskProgress=Math.min(100,r.taskProgress+8);r.taskDone=r.taskProgress>=100;renderTaskList();if(isMultiplayer&&conn&&conn.open)conn.send({type:"task",idx:i,progress:r.taskProgress,done:r.taskDone});if(r.taskDone)statusMsg.innerText=r.taskName+" complete!";return;}
+          }
+        }
+        function updateLogic(){
+          if(!gameActive)return;let dx=0,dy=0;if(keys.w||keys.arrowup)dy=-localPlayer.speed;if(keys.s||keys.arrowdown)dy=localPlayer.speed;if(keys.a||keys.arrowleft){dx=-localPlayer.speed;localPlayer.facingLeft=true;}if(keys.d||keys.arrowright){dx=localPlayer.speed;localPlayer.facingLeft=false;}
+          localPlayer.x=Math.max(20,Math.min(canvas.width-20,localPlayer.x+dx));localPlayer.y=Math.max(20,Math.min(canvas.height-20,localPlayer.y+dy));if(dx||dy)broadcastPlayerState();
+          if(isPractice&&remotePlayer.active&&!remotePlayer.dead){remotePlayer.timer=(remotePlayer.timer||0)+1;const t=rooms[(Math.floor(remotePlayer.timer/220))%rooms.length];const a=Math.atan2(t.y+t.h/2-remotePlayer.y,t.x+t.w/2-remotePlayer.x);remotePlayer.x+=Math.cos(a)*1.5;remotePlayer.y+=Math.sin(a)*1.5;if(Math.hypot(localPlayer.x-remotePlayer.x,localPlayer.y-remotePlayer.y)<35)triggerKillSequence();}
+          if(localPlayer.role==="crewmate"){const near=rooms.some(r=>!r.taskDone&&Math.hypot(localPlayer.x-r.taskX,localPlayer.y-r.taskY)<48);actionBtn.style.background=near?"radial-gradient(circle,#5ff27e 0%,#1e7e34 100%)":"radial-gradient(circle,#00adb5 0%,#006b70 100%)";if((keys[" "]||keys.e)&&near&&Date.now()%6===0)triggerAction();}
+          else{actionBtn.innerText="KILL";actionBtn.style.background=remotePlayer.active&&Math.hypot(localPlayer.x-remotePlayer.x,localPlayer.y-remotePlayer.y)<48?"#c22":"#555";}
+          checkSabotage();if(rooms.filter(r=>r.taskDone).length>=5&&localPlayer.role==="crewmate"){gameActive=false;statusMsg.innerText="Crew tasks complete — CREWMATES WIN!";}
+        }
+        function render(){
+          ctx.clearRect(0,0,canvas.width,canvas.height);const bg=ctx.createLinearGradient(0,0,0,500);bg.addColorStop(0,"#172b3a");bg.addColorStop(1,"#050a12");ctx.fillStyle=bg;ctx.fillRect(0,0,800,500);
+          decor.forEach(d=>{ctx.fillStyle="rgba(130,190,220,.18)";ctx.beginPath();ctx.arc(d.x,d.y,d.r,0,Math.PI*2);ctx.fill();});
+          ctx.lineCap="round";ctx.strokeStyle="#101d29";ctx.lineWidth=40;corridors.forEach(c=>{ctx.beginPath();ctx.moveTo(c[0],c[1]);ctx.lineTo(c[2],c[3]);ctx.stroke();});
+          ctx.strokeStyle="#40596a";ctx.lineWidth=3;corridors.forEach(c=>{ctx.beginPath();ctx.moveTo(c[0],c[1]);ctx.lineTo(c[2],c[3]);ctx.stroke();});
+          rooms.forEach(r=>{ctx.fillStyle=r.color;ctx.fillRect(r.x,r.y,r.w,r.h);ctx.strokeStyle="#70889a";ctx.lineWidth=4;ctx.strokeRect(r.x,r.y,r.w,r.h);ctx.fillStyle="#d4e7ef";ctx.font='bold 12px "Courier New"';ctx.fillText(r.name.toUpperCase(),r.x+8,r.y+18);ctx.fillStyle="#304757";ctx.fillRect(r.x+10,r.y+29,r.w-20,r.h-40);
+            if(r.name.toLowerCase().includes("cafe")||r.name==="Meeting Room"){ctx.fillStyle="#899ba8";for(let j=0;j<3;j++){ctx.beginPath();ctx.ellipse(r.x+45+j*65,r.y+65,20,12,0,0,Math.PI*2);ctx.fill();}}
+            if(r.name==="Security"||r.name==="Cockpit"){for(let j=0;j<3;j++){ctx.fillStyle="#60d9e8";ctx.fillRect(r.x+12+j*40,r.y+45,28,18);}}
+            ctx.fillStyle=r.taskDone?"#5ff27e":"#ffeba7";ctx.beginPath();ctx.arc(r.taskX,r.taskY,r.taskDone?4:7+Math.sin(Date.now()/140)*2,0,Math.PI*2);ctx.fill();
+            ctx.fillStyle="#9b3d42";ctx.fillRect(r.x+8,r.y+r.h-16,20,8);ctx.strokeStyle="#e08a8e";ctx.strokeRect(r.x+8,r.y+r.h-16,20,8);
+          });
+          if(remotePlayer.active&&!remotePlayer.dead)drawCrewmate(ctx,remotePlayer.x,remotePlayer.y,remotePlayer.color,remotePlayer.visorColor,remotePlayer.facingLeft,remotePlayer.name);
+          drawCrewmate(ctx,localPlayer.x,localPlayer.y,localPlayer.color,localPlayer.visorColor,localPlayer.facingLeft,localPlayer.name);
+          if(bodyPosition){ctx.fillStyle="#eee";ctx.fillRect(bodyPosition.x-12,bodyPosition.y-2,24,7);ctx.fillStyle="#d33";ctx.beginPath();ctx.arc(bodyPosition.x,bodyPosition.y-5,8,0,Math.PI*2);ctx.fill();}
+          if(activeSabotage==="lights"){ctx.fillStyle="rgba(0,0,0,.72)";ctx.fillRect(0,0,800,500);ctx.save();ctx.globalCompositeOperation="destination-out";ctx.beginPath();ctx.arc(localPlayer.x,localPlayer.y,110,0,Math.PI*2);ctx.fill();ctx.restore();}
+          ctx.fillStyle="rgba(5,12,20,.9)";ctx.fillRect(650,15,135,95);ctx.strokeStyle="#597184";ctx.strokeRect(650,15,135,95);ctx.fillStyle="#d8edf4";ctx.font="10px sans-serif";ctx.fillText(mapCatalog[currentMap].name.toUpperCase(),656,27);rooms.forEach(r=>{ctx.fillStyle="#688395";ctx.fillRect(650+r.x/800*120,32+r.y/500*70,Math.max(2,r.w/800*120),Math.max(2,r.h/500*70));});ctx.fillStyle=localPlayer.color;ctx.beginPath();ctx.arc(650+localPlayer.x/800*120+7,15+localPlayer.y/500*80+7,3,0,Math.PI*2);ctx.fill();
+        }
+
         function gameLoop() {
             updateLogic();
+            if(keys["tab"]&&gameActive){openShipMap();keys["tab"]=false;}
+            if(keys["r"]&&gameActive){reportBody();keys["r"]=false;}
+            if(keys["q"]&&gameActive){callMeeting();keys["q"]=false;}
             render();
             requestAnimationFrame(gameLoop);
         }
