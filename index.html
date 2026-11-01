@@ -456,11 +456,12 @@
                     statusMsg.innerText = remotePlayer.name + " connected. Ready in lobby!";
                     refreshLobbyPlayers();
                     // Echo response profile framing values back to node
-                    conn.send({ type: 'handshake-reply', name: localPlayer.name });
+                    conn.send({ type: 'handshake-reply', name: localPlayer.name, map: currentMap });
                 }
                 else if (data.type === 'handshake-reply') {
                     remotePlayer.name = data.name;
                     remotePlayer.active = true;
+                    if(data.map) { loadMap(data.map); document.getElementById('map-select').value=data.map; }
                     refreshLobbyPlayers();
                 }
                 else if (data.type === 'sync') {
@@ -476,7 +477,7 @@
                     renderTaskList();
                 }
                 else if (data.type === 'kill') {
-                    bodyPosition={x:remotePlayer.x,y:remotePlayer.y};remotePlayer.dead=true;triggerKillSequence();
+                    bodyPosition={x:localPlayer.x,y:localPlayer.y};triggerKillSequence();
                 }
                 else if(data.type==='meeting'){openMeeting(data.caller);}
                 else if(data.type==='vote'){receiveVote(data.vote);}
@@ -706,7 +707,15 @@
         function openMeeting(caller){if(meetingOpen)return;meetingOpen=true;gameActive=false;votes={};showModal("<h2>EMERGENCY MEETING</h2><p>"+escapeLobbyText(caller)+" called a meeting. Who is the impostor?</p><button class='vote-btn' onclick=\"castVote('skip')\">SKIP</button><button class='vote-btn' onclick=\"castVote('player')\">VOTE PLAYER</button><p id='vote-status'>Discuss and vote.</p>");}
         function castVote(v){votes.local=v;if(isMultiplayer&&conn&&conn.open)conn.send({type:"vote",vote:v});if(!isMultiplayer||isPractice)resolveVotes();else document.getElementById("vote-status").innerText="Vote submitted. Waiting for the other player.";}
         function receiveVote(v){votes.remote=v;if(votes.local)resolveVotes();}
-        function resolveVotes(){const ejected=votes.local==="player"&&(votes.remote==="player"||isPractice);showModal("<h2>VOTING RESULTS</h2><p>"+(ejected?"The impostor was ejected. CREWMATES WIN!":"No ejection. The round continues.")+"</p><button class='vote-btn' onclick='finishMeeting("+ejected+")'>CONTINUE</button>");}
+        function resolveVotes(){
+          if(isPractice&&!votes.remote)votes.remote="skip";
+          const crewVote=localPlayer.role==="crewmate"?votes.local:votes.remote;
+          const impVote=localPlayer.role==="imposter"?votes.local:votes.remote;
+          const crewWin=crewVote==="player"&&impVote==="skip";
+          const impWin=crewVote==="skip"&&impVote==="player";
+          const result=crewWin?"Crewmates correctly voted out the impostor. CREWMATES WIN!":impWin?"The crew skipped while the impostor voted. IMPOSTOR WINS!":"The vote was tied. No one was ejected.";
+          showModal("<h2>VOTING RESULTS</h2><p>"+result+"</p><button class='vote-btn' onclick='finishMeeting("+crewWin+")'>CONTINUE</button>");
+        }
         function finishMeeting(won){meetingOpen=false;hideModal();if(won){gameActive=false;statusMsg.innerText="Crewmates win!";}else{gameActive=true;statusMsg.innerText="Meeting ended. Complete your tasks.";}}
         function nearestVent(){let best=null,dist=1e9;rooms.forEach((r,i)=>{const x=r.x+17,y=r.y+r.h-14,d=Math.hypot(localPlayer.x-x,localPlayer.y-y);if(d<dist){dist=d;best={x,y,i};}});return dist<34?best:null;}
         function triggerAction(){
@@ -714,7 +723,7 @@
           if(localPlayer.role==="imposter"){
             if(Date.now()<killReadyAt){statusMsg.innerText="Kill cooldown: "+Math.ceil((killReadyAt-Date.now())/1000)+"s";return;}
             if(remotePlayer.active&&!remotePlayer.dead&&Math.hypot(localPlayer.x-remotePlayer.x,localPlayer.y-remotePlayer.y)<48){
-              if(isMultiplayer&&conn&&conn.open)conn.send({type:"kill"});
+              if(isMultiplayer&&conn&&conn.open)conn.send({type:"kill",x:remotePlayer.x,y:remotePlayer.y});
               bodyPosition={x:remotePlayer.x,y:remotePlayer.y};remotePlayer.dead=true;killReadyAt=Date.now()+18000;statusMsg.innerText="Eliminated. Report the body before it is found.";return;
             }
             const v=nearestVent();if(v){const dest=rooms[(v.i+3)%rooms.length];localPlayer.x=dest.x+dest.w/2;localPlayer.y=dest.y+dest.h/2;statusMsg.innerText="Vent travel complete.";return;}
