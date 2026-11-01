@@ -865,32 +865,111 @@ body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.38;ba
           }
         }
         function updateLogic(){
-          if(!gameActive)return;let dx=0,dy=0;if(keys.w||keys.arrowup)dy=-localPlayer.speed;if(keys.s||keys.arrowdown)dy=localPlayer.speed;if(keys.a||keys.arrowleft){dx=-localPlayer.speed;localPlayer.facingLeft=true;}if(keys.d||keys.arrowright){dx=localPlayer.speed;localPlayer.facingLeft=false;}
-          localPlayer.x=Math.max(20,Math.min(canvas.width-20,localPlayer.x+dx));localPlayer.y=Math.max(20,Math.min(canvas.height-20,localPlayer.y+dy));if(dx||dy)broadcastPlayerState();
-          if(isPractice&&remotePlayer.active&&!remotePlayer.dead){remotePlayer.timer=(remotePlayer.timer||0)+1;const t=rooms[(Math.floor(remotePlayer.timer/220))%rooms.length];const a=Math.atan2(t.y+t.h/2-remotePlayer.y,t.x+t.w/2-remotePlayer.x);remotePlayer.x+=Math.cos(a)*1.5;remotePlayer.y+=Math.sin(a)*1.5;if(Math.hypot(localPlayer.x-remotePlayer.x,localPlayer.y-remotePlayer.y)<35)triggerKillSequence();}
-          if(localPlayer.role==="crewmate"){const near=rooms.some(r=>!r.taskDone&&Math.hypot(localPlayer.x-r.taskX,localPlayer.y-r.taskY)<48);actionBtn.style.background=near?"radial-gradient(circle,#5ff27e 0%,#1e7e34 100%)":"radial-gradient(circle,#00adb5 0%,#006b70 100%)";if((keys[" "]||keys.e)&&near&&Date.now()%6===0)triggerAction();}
-          else{actionBtn.innerText="KILL";actionBtn.style.background=remotePlayer.active&&Math.hypot(localPlayer.x-remotePlayer.x,localPlayer.y-remotePlayer.y)<48?"#c22":"#555";}
-          checkSabotage();if(rooms.filter(r=>r.taskDone).length>=5&&localPlayer.role==="crewmate"){gameActive=false;statusMsg.innerText="Crew tasks complete — CREWMATES WIN!";}
+          if(!gameActive)return;
+          let moveX = (keys.d||keys.arrowright?1:0)-(keys.a||keys.arrowleft?1:0);
+          let moveY = (keys.s||keys.arrowdown?1:0)-(keys.w||keys.arrowup?1:0);
+          moveX += touchMove.x; moveY += touchMove.y;
+          const mag = Math.hypot(moveX, moveY);
+          if(mag > 1){ moveX /= mag; moveY /= mag; }
+          const dx = moveX * localPlayer.speed, dy = moveY * localPlayer.speed;
+          if(dx < -0.05) localPlayer.facingLeft = true;
+          else if(dx > 0.05) localPlayer.facingLeft = false;
+          localPlayer.x = Math.max(20, Math.min(canvas.width-20, localPlayer.x + dx));
+          localPlayer.y = Math.max(20, Math.min(canvas.height-20, localPlayer.y + dy));
+          if(dx || dy) broadcastPlayerState();
+          if(isPractice && remotePlayer.active && !remotePlayer.dead){
+            remotePlayer.timer = (remotePlayer.timer||0)+1;
+            const t = rooms[(Math.floor(remotePlayer.timer/220))%rooms.length];
+            const a = Math.atan2(t.y+t.h/2-remotePlayer.y, t.x+t.w/2-remotePlayer.x);
+            remotePlayer.x += Math.cos(a)*1.5; remotePlayer.y += Math.sin(a)*1.5;
+            if(Math.hypot(localPlayer.x-remotePlayer.x, localPlayer.y-remotePlayer.y)<35) triggerKillSequence();
+          }
+          if(localPlayer.role === "crewmate"){
+            const near = rooms.some(r => !r.taskDone && Math.hypot(localPlayer.x-r.taskX, localPlayer.y-r.taskY)<48);
+            actionBtn.style.background = near ? "radial-gradient(circle,#5ff27e 0%,#1e7e34 100%)" : "radial-gradient(circle,#00adb5 0%,#006b70 100%)";
+            if((keys[" "]||keys.e) && near && Date.now()%6===0) triggerAction();
+          } else {
+            actionBtn.innerText = "KILL";
+            actionBtn.style.background = remotePlayer.active && Math.hypot(localPlayer.x-remotePlayer.x, localPlayer.y-remotePlayer.y)<48 ? "#c22" : "#555";
+          }
+          checkSabotage();
+          if(rooms.filter(r=>r.taskDone).length>=5 && localPlayer.role==="crewmate"){
+            gameActive=false; statusMsg.innerText="Crew tasks complete — CREWMATES WIN!";
+          }
         }
         function render(){
-          ctx.clearRect(0,0,canvas.width,canvas.height);const bg=ctx.createLinearGradient(0,0,0,500);bg.addColorStop(0,"#172b3a");bg.addColorStop(1,"#050a12");ctx.fillStyle=bg;ctx.fillRect(0,0,800,500);
-          decor.forEach(d=>{ctx.fillStyle="rgba(130,190,220,.18)";ctx.beginPath();ctx.arc(d.x,d.y,d.r,0,Math.PI*2);ctx.fill();});
-          ctx.lineCap="round";ctx.strokeStyle="#101d29";ctx.lineWidth=40;corridors.forEach(c=>{ctx.beginPath();ctx.moveTo(c[0],c[1]);ctx.lineTo(c[2],c[3]);ctx.stroke();});
-          ctx.strokeStyle="#40596a";ctx.lineWidth=3;corridors.forEach(c=>{ctx.beginPath();ctx.moveTo(c[0],c[1]);ctx.lineTo(c[2],c[3]);ctx.stroke();});
-          rooms.forEach(r=>{ctx.fillStyle=r.color;ctx.fillRect(r.x,r.y,r.w,r.h);ctx.strokeStyle="#70889a";ctx.lineWidth=4;ctx.strokeRect(r.x,r.y,r.w,r.h);ctx.fillStyle="#d4e7ef";ctx.font='bold 12px "Courier New"';ctx.fillText(r.name.toUpperCase(),r.x+8,r.y+18);ctx.fillStyle="#304757";ctx.fillRect(r.x+10,r.y+29,r.w-20,r.h-40);
-            if(r.name.toLowerCase().includes("cafe")||r.name==="Meeting Room"){ctx.fillStyle="#899ba8";for(let j=0;j<3;j++){ctx.beginPath();ctx.ellipse(r.x+45+j*65,r.y+65,20,12,0,0,Math.PI*2);ctx.fill();}}
-            if(r.name==="Security"||r.name==="Cockpit"){for(let j=0;j<3;j++){ctx.fillStyle="#60d9e8";ctx.fillRect(r.x+12+j*40,r.y+45,28,18);}}
-            ctx.fillStyle=r.taskDone?"#5ff27e":"#ffeba7";ctx.beginPath();ctx.arc(r.taskX,r.taskY,r.taskDone?4:7+Math.sin(Date.now()/140)*2,0,Math.PI*2);ctx.fill();
-            ctx.fillStyle="#9b3d42";ctx.fillRect(r.x+8,r.y+r.h-16,20,8);ctx.strokeStyle="#e08a8e";ctx.strokeRect(r.x+8,r.y+r.h-16,20,8);
-          });
-          if(remotePlayer.active&&!remotePlayer.dead)drawCrewmate(ctx,remotePlayer.x,remotePlayer.y,remotePlayer.color,remotePlayer.visorColor,remotePlayer.facingLeft,remotePlayer.name);
-          drawCrewmate(ctx,localPlayer.x,localPlayer.y,localPlayer.color,localPlayer.visorColor,localPlayer.facingLeft,localPlayer.name);
-          if(bodyPosition){ctx.fillStyle="#eee";ctx.fillRect(bodyPosition.x-12,bodyPosition.y-2,24,7);ctx.fillStyle="#d33";ctx.beginPath();ctx.arc(bodyPosition.x,bodyPosition.y-5,8,0,Math.PI*2);ctx.fill();}
-          if(activeSabotage==="lights"){ctx.fillStyle="rgba(0,0,0,.72)";ctx.fillRect(0,0,800,500);ctx.save();ctx.globalCompositeOperation="destination-out";ctx.beginPath();ctx.arc(localPlayer.x,localPlayer.y,110,0,Math.PI*2);ctx.fill();ctx.restore();}
-          ctx.fillStyle="rgba(5,12,20,.9)";ctx.fillRect(650,15,135,95);ctx.strokeStyle="#597184";ctx.strokeRect(650,15,135,95);ctx.fillStyle="#d8edf4";ctx.font="10px sans-serif";ctx.fillText(mapCatalog[currentMap].name.toUpperCase(),656,27);rooms.forEach(r=>{ctx.fillStyle="#688395";ctx.fillRect(650+r.x/800*120,32+r.y/500*70,Math.max(2,r.w/800*120),Math.max(2,r.h/500*70));});ctx.fillStyle=localPlayer.color;ctx.beginPath();ctx.arc(650+localPlayer.x/800*120+7,15+localPlayer.y/500*80+7,3,0,Math.PI*2);ctx.fill();
-        }
+          ctx.clearRect(0,0,canvas.width,canvas.height);
+          ctx.fillStyle="#050a12";
+          ctx.fillRect(0,0,canvas.width,canvas.height);
 
-        function gameLoop() {
+          const SCALE = 2.15; // Zoom in like real Among Us
+          const camX = canvas.width/2 - localPlayer.x * SCALE;
+          const camY = canvas.height/2 - localPlayer.y * SCALE;
+
+          ctx.save();
+          ctx.translate(camX, camY);
+          ctx.scale(SCALE, SCALE);
+
+          // Background stars/decor
+          decor.forEach(d=>{ctx.fillStyle="rgba(130,190,220,.25)";ctx.beginPath();ctx.arc(d.x,d.y,d.r,0,Math.PI*2);ctx.fill();});
+
+          // Corridors
+          ctx.lineCap="round";ctx.strokeStyle="#101d29";ctx.lineWidth=40;
+          corridors.forEach(c=>{ctx.beginPath();ctx.moveTo(c[0],c[1]);ctx.lineTo(c[2],c[3]);ctx.stroke();});
+          ctx.strokeStyle="#40596a";ctx.lineWidth=3;
+          corridors.forEach(c=>{ctx.beginPath();ctx.moveTo(c[0],c[1]);ctx.lineTo(c[2],c[3]);ctx.stroke();});
+
+          // Rooms
+          rooms.forEach(r=>{
+            ctx.fillStyle=r.color;ctx.fillRect(r.x,r.y,r.w,r.h);
+            ctx.strokeStyle="#70889a";ctx.lineWidth=4;ctx.strokeRect(r.x,r.y,r.w,r.h);
+            ctx.fillStyle="#d4e7ef";ctx.font='bold 12px "Courier New"';ctx.fillText(r.name.toUpperCase(),r.x+8,r.y+18);
+            ctx.fillStyle="#304757";ctx.fillRect(r.x+10,r.y+29,r.w-20,r.h-40);
+            if(r.name.toLowerCase().includes("cafe")||r.name==="Meeting Room"){
+              ctx.fillStyle="#899ba8";
+              for(let j=0;j<3;j++){ctx.beginPath();ctx.ellipse(r.x+45+j*65,r.y+65,20,12,0,0,Math.PI*2);ctx.fill();}
+            }
+            if(r.name==="Security"||r.name==="Cockpit"){
+              for(let j=0;j<3;j++){ctx.fillStyle="#60d9e8";ctx.fillRect(r.x+12+j*40,r.y+45,28,18);}
+            }
+            ctx.fillStyle=r.taskDone?"#5ff27e":"#ffeba7";
+            ctx.beginPath();ctx.arc(r.taskX,r.taskY,r.taskDone?4:7+Math.sin(Date.now()/140)*2,0,Math.PI*2);ctx.fill();
+            ctx.fillStyle="#9b3d42";ctx.fillRect(r.x+8,r.y+r.h-16,20,8);
+            ctx.strokeStyle="#e08a8e";ctx.strokeRect(r.x+8,r.y+r.h-16,20,8);
+          });
+
+          // Players and body
+          if(remotePlayer.active && !remotePlayer.dead) drawCrewmate(ctx,remotePlayer.x,remotePlayer.y,remotePlayer.color,remotePlayer.visorColor,remotePlayer.facingLeft,remotePlayer.name);
+          drawCrewmate(ctx,localPlayer.x,localPlayer.y,localPlayer.color,localPlayer.visorColor,localPlayer.facingLeft,localPlayer.name);
+          if(bodyPosition){
+            ctx.fillStyle="#eee";ctx.fillRect(bodyPosition.x-12,bodyPosition.y-2,24,7);
+            ctx.fillStyle="#d33";ctx.beginPath();ctx.arc(bodyPosition.x,bodyPosition.y-5,8,0,Math.PI*2);ctx.fill();
+          }
+
+          // Lights sabotage fog (world space, then we'll overlay screen if needed)
+          if(activeSabotage==="lights"){
+            ctx.fillStyle="rgba(0,0,0,.72)";
+            ctx.fillRect(0,0,800,500);
+            ctx.save();
+            ctx.globalCompositeOperation="destination-out";
+            ctx.beginPath();ctx.arc(localPlayer.x,localPlayer.y,110,0,Math.PI*2);ctx.fill();
+            ctx.restore();
+          }
+
+          ctx.restore();
+
+          // Screen-space radar (top right, not affected by camera)
+          ctx.fillStyle="rgba(5,12,20,.9)";ctx.fillRect(650,15,135,95);
+          ctx.strokeStyle="#597184";ctx.strokeRect(650,15,135,95);
+          ctx.fillStyle="#d8edf4";ctx.font="10px sans-serif";
+          ctx.fillText(mapCatalog[currentMap].name.toUpperCase(),656,27);
+          rooms.forEach(r=>{
+            ctx.fillStyle="#688395";
+            ctx.fillRect(650+r.x/800*120,32+r.y/500*70,Math.max(2,r.w/800*120),Math.max(2,r.h/500*70));
+          });
+          ctx.fillStyle=localPlayer.color;
+          ctx.beginPath();ctx.arc(650+localPlayer.x/800*120+7,15+localPlayer.y/500*80+7,3,0,Math.PI*2);ctx.fill();
+        }function gameLoop() {
             updateLogic();
             if(keys["tab"]&&gameActive){openShipMap();keys["tab"]=false;}
             if(keys["r"]&&gameActive){reportBody();keys["r"]=false;}
