@@ -373,8 +373,8 @@ body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.38;ba
         loadMap("skeld");
 
         // Player models
-        const localPlayer = { x: 400, y: 120, radius: 16, speed: 4, color: '#00adb5', visorColor: '#a6e3e9', facingLeft: false, name: 'Player', role: 'crewmate' };
-        const remotePlayer = { x: 100, y: 400, radius: 16, color: '#ff3333', visorColor: '#a6e3e9', facingLeft: false, name: 'Waiting...', role: 'imposter', active: false };
+        const localPlayer = { x: 400, y: 120, radius: 5, speed: 1.35, color: '#00adb5', visorColor: '#a6e3e9', facingLeft: false, name: 'Player', role: 'crewmate' };
+        const remotePlayer = { x: 100, y: 400, radius: 5, color: '#ff3333', visorColor: '#a6e3e9', facingLeft: false, name: 'Waiting...', role: 'imposter', active: false };
 
         window.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
         window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
@@ -648,6 +648,9 @@ body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.38;ba
 
         function drawCrewmate(cCtx, x, y, baseColor, visorColor, isLeft, nameTag) {
             cCtx.save();
+            cCtx.translate(x, y);
+            cCtx.scale(0.33, 0.33); // 3x smaller
+            cCtx.translate(-x, -y);
             // Name Tag Rendering
             cCtx.fillStyle = '#ffffff';
             cCtx.font = '12px "Courier New"';
@@ -864,7 +867,25 @@ body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.38;ba
             if(i>=0){const r=rooms[i];r.taskProgress=Math.min(100,r.taskProgress+8);r.taskDone=r.taskProgress>=100;renderTaskList();if(isMultiplayer&&conn&&conn.open)conn.send({type:"task",idx:i,progress:r.taskProgress,done:r.taskDone});if(r.taskDone)statusMsg.innerText=r.taskName+" complete!";return;}
           }
         }
-        function updateLogic(){
+        
+        function distToSegment(px, py, x1, y1, x2, y2) {
+            const dx = x2 - x1, dy = y2 - y1;
+            const len2 = dx*dx + dy*dy;
+            if (len2 === 0) return Math.hypot(px - x1, py - y1);
+            let t = ((px - x1)*dx + (py - y1)*dy) / len2;
+            t = Math.max(0, Math.min(1, t));
+            return Math.hypot(px - (x1 + t*dx), py - (y1 + t*dy));
+        }
+        function isWalkable(px, py) {
+            for (const r of rooms) {
+                if (px >= r.x + 6 && px <= r.x + r.w - 6 && py >= r.y + 6 && py <= r.y + r.h - 6) return true;
+            }
+            for (const c of corridors) {
+                if (distToSegment(px, py, c[0], c[1], c[2], c[3]) < 20) return true;
+            }
+            return false;
+        }
+function updateLogic(){
           if(!gameActive)return;
           let moveX = (keys.d||keys.arrowright?1:0)-(keys.a||keys.arrowleft?1:0);
           let moveY = (keys.s||keys.arrowdown?1:0)-(keys.w||keys.arrowup?1:0);
@@ -874,8 +895,12 @@ body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.38;ba
           const dx = moveX * localPlayer.speed, dy = moveY * localPlayer.speed;
           if(dx < -0.05) localPlayer.facingLeft = true;
           else if(dx > 0.05) localPlayer.facingLeft = false;
-          localPlayer.x = Math.max(20, Math.min(canvas.width-20, localPlayer.x + dx));
-          localPlayer.y = Math.max(20, Math.min(canvas.height-20, localPlayer.y + dy));
+          const nx = Math.max(20, Math.min(canvas.width-20, localPlayer.x + dx));
+          const ny = Math.max(20, Math.min(canvas.height-20, localPlayer.y + dy));
+          if (isWalkable(nx, ny)) {
+            localPlayer.x = nx;
+            localPlayer.y = ny;
+          }
           if(dx || dy) broadcastPlayerState();
           if(isPractice && remotePlayer.active && !remotePlayer.dead){
             remotePlayer.timer = (remotePlayer.timer||0)+1;
