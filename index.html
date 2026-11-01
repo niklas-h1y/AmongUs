@@ -365,6 +365,14 @@ body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.38;ba
           rooms=m.rooms.map((r,i)=>({name:r[0],x:r[1],y:r[2],w:r[3],h:r[4],color:["#263746","#24404a","#293548","#3b3c43","#253b42","#3b342b","#293b4a"][i%7],taskX:r[1]+r[3]*.5,taskY:r[2]+r[4]*.62,taskDone:false,taskProgress:0,taskName:taskNames[(i+Object.keys(mapCatalog).indexOf(currentMap)*2)%taskNames.length]}));
           corridors=m.links;renderTaskList();
           const n=document.getElementById("lobby-map-name"),d=document.getElementById("lobby-map-desc");if(n)n.innerText=m.name.toUpperCase();if(d)d.innerText=m.desc;
+          // Ensure player starts in a walkable spot when map loads
+          if (typeof localPlayer !== "undefined" && rooms.length) {
+            const safe = rooms.find(r => r.name.toLowerCase().includes("cafe") || r.name.toLowerCase().includes("meeting")) || rooms[0];
+            if (safe && (!isWalkable(localPlayer.x, localPlayer.y) || localPlayer.x < 10)) {
+              localPlayer.x = safe.x + safe.w/2;
+              localPlayer.y = safe.y + safe.h/2;
+            }
+          }
         }
         function selectMap(id){loadMap(id);}
         function selectColor(color){localPlayer.color=color;}
@@ -471,9 +479,20 @@ body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.38;ba
             initGameUI();
             gameActive = true;
             statusMsg.innerText = isPractice ? 'Practice mode active with AI Imposter.' : 'Crew launched. Complete your tasks!';
-            // Reset positions somewhat randomly in cafeteria-like area
-            localPlayer.x = 350 + Math.random()*100;
-            localPlayer.y = 200 + Math.random()*80;
+            // Safe spawn inside a walkable room (prefer cafeteria or first room)
+            let spawnRoom = rooms.find(r => r.name.toLowerCase().includes("cafe") || r.name.toLowerCase().includes("meeting") || r.name.toLowerCase().includes("office")) || rooms[0];
+            if (spawnRoom) {
+              localPlayer.x = spawnRoom.x + spawnRoom.w * 0.5;
+              localPlayer.y = spawnRoom.y + spawnRoom.h * 0.5;
+              // Nudge if somehow not walkable
+              if (!isWalkable(localPlayer.x, localPlayer.y)) {
+                localPlayer.x = spawnRoom.x + 20;
+                localPlayer.y = spawnRoom.y + 20;
+              }
+            } else {
+              localPlayer.x = 400;
+              localPlayer.y = 250;
+            }
         }
 
         function initGameUI() {
