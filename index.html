@@ -283,9 +283,9 @@ body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.38;ba
                 <div class="lobby-hint">Crewmates gather here before launch. Check your crew list, then start the round when everyone is ready.</div>
             </section>
             <section class="lobby-panel">
-                <h3>CREW MANIFEST <span id="lobby-count" style="float:right;color:#8cecff">1 / 2</span></h3>
+                <h3>CREW MANIFEST <span id="lobby-count" style="float:right;color:#8cecff">1 / 15</span></h3>
                 <div id="lobby-players"></div>
-                <div class="lobby-hint" id="lobby-status">Waiting for another crewmate to connect…</div>
+                <div class="lobby-hint" id="lobby-status">Waiting for crewmates to connect (up to 15)…</div>
                 <h3 style="margin-top:22px">SELECTED MAP</h3>
                 <div style="padding:12px;background:#1b2b3b;border-radius:7px;border:1px solid #344b60">
                     <label>MAP <select id="map-select" onchange="selectMap(this.value)"><option value="skeld">The Skeld</option><option value="mira">MIRA HQ</option><option value="polus">Polus</option><option value="airship">The Airship</option><option value="fungle">The Fungle</option></select></label>
@@ -352,7 +352,7 @@ body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.38;ba
 
         // Five selectable map layouts with room-specific geometry and task stations.
         const mapCatalog={
-          skeld:{name:"The Skeld",desc:"Classic spaceship · Cafeteria · Reactor",rooms:[["Cafeteria",285,185,235,130],["Upper Engine",35,35,175,112],["MedBay",265,35,155,112],["Security",610,35,155,112],["Electrical",35,330,175,135],["Storage",285,365,155,100],["Admin",565,330,200,135],["Lower Engine",35,185,175,112],["Reactor",610,185,155,112]],links:[[122,147,122,185],[122,297,122,330],[210,90,265,90],[420,90,610,90],[342,147,342,185],[520,250,610,250],[685,147,685,185],[685,297,685,330],[210,395,285,415],[440,415,565,395]]},
+          skeld:{name:"The Skeld",desc:"Classic spaceship · Cafeteria · Reactor",rooms:[["Cafeteria",220,140,280,160],["Upper Engine",20,20,160,100],["MedBay",200,20,140,100],["Security",520,20,140,100],["Electrical",20,280,160,120],["Storage",220,320,140,90],["Admin",480,280,180,120],["Lower Engine",20,140,160,100],["Reactor",520,140,140,100],["Navigation",680,80,100,80]],links:[[100,120,100,140],[100,240,100,280],[180,70,200,70],[340,70,520,70],[300,140,300,160],[400,220,520,220],[590,120,590,140],[590,240,590,280],[180,360,220,360],[360,360,480,360]]},
           mira:{name:"MIRA HQ",desc:"High-altitude station · Greenhouse · Decontamination",rooms:[["Launchpad",35,35,175,112],["MedBay",300,35,170,112],["Greenhouse",590,35,175,112],["Cafeteria",300,185,220,125],["Office",35,185,175,112],["Laboratory",590,185,175,112],["Reactor",35,350,175,115],["Admin",300,350,220,115],["Communications",590,350,175,115]],links:[[122,147,122,185],[122,297,122,350],[210,90,300,90],[470,90,590,90],[385,147,385,185],[520,250,590,250],[210,407,300,407],[520,407,590,407],[385,310,385,350]]},
           polus:{name:"Polus",desc:"Frozen outpost · Specimen · Dropship",rooms:[["Dropship",35,35,175,112],["Electrical",300,35,170,112],["Specimen",590,35,175,112],["Office",300,185,220,125],["O2",35,185,175,112],["Laboratory",590,185,175,112],["Storage",35,350,175,115],["Admin",300,350,220,115],["Security",590,350,175,115]],links:[[122,147,122,185],[122,297,122,350],[210,90,300,90],[470,90,590,90],[385,147,385,185],[520,250,590,250],[210,407,300,407],[520,407,590,407],[385,310,385,350]]},
           airship:{name:"The Airship",desc:"Huge airship · Records · Kitchen · Vault",rooms:[["Cockpit",35,35,175,112],["Viewing Deck",300,35,170,112],["Brig",590,35,175,112],["Meeting Room",300,185,220,125],["Records",35,185,175,112],["Kitchen",590,185,175,112],["Vault",35,350,175,115],["Electrical",300,350,220,115],["Cargo Bay",590,350,175,115]],links:[[122,147,122,185],[122,297,122,350],[210,90,300,90],[470,90,590,90],[385,147,385,185],[520,250,590,250],[210,407,300,407],[520,407,590,407],[385,310,385,350]]},
@@ -427,11 +427,11 @@ body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.38;ba
         function refreshLobbyPlayers() {
             const players = [{name:localPlayer.name || 'Crewmate', color:localPlayer.color || '#00adb5', host:isHost}];
             if (remotePlayer.active) players.push({name:remotePlayer.name, color:remotePlayer.color, host:false});
-            document.getElementById('lobby-count').innerText = players.length + ' / 2';
+            document.getElementById('lobby-count').innerText = players.length + " / 15";
             document.getElementById('lobby-players').innerHTML = players.map((p,i) =>
                 '<div class="lobby-player"><span class="player-dot" style="background:'+p.color+'"></span><strong>'+escapeLobbyText(p.name)+'</strong><small>'+(p.host?'HOST':'CREWMATE')+'</small></div>'
             ).join('');
-            document.getElementById('lobby-status').innerText = remotePlayer.active ? 'Crew assembled. Ready for launch!' : (isPractice ? 'Practice session ready. The AI imposter is standing by.' : 'Waiting for another crewmate to connect…');
+            document.getElementById('lobby-status').innerText = remotePlayer.active ? 'Crew assembled. Ready for launch!' : (isPractice ? 'Practice session ready. The AI imposter is standing by.' : 'Waiting for crewmates to connect (up to 15)…');
         }
 
         function escapeLobbyText(value) {
@@ -927,7 +927,7 @@ function updateLogic(){
           ctx.fillStyle="#050a12";
           ctx.fillRect(0,0,canvas.width,canvas.height);
 
-          const SCALE = 2.15; // Zoom in like real Among Us
+          const SCALE = 6.5; // 3x more zoomed in // Zoom in like real Among Us
           const camX = canvas.width/2 - localPlayer.x * SCALE;
           const camY = canvas.height/2 - localPlayer.y * SCALE;
 
