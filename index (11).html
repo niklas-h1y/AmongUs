@@ -127,6 +127,46 @@
             font-size: 14px;
             margin-top: 5px;
         }
+
+        /* New pre-game lobby; the main menu above is intentionally untouched. */
+        #lobby-screen {
+            display:none; width:min(900px,94vw); min-height:510px; box-sizing:border-box;
+            padding:22px; background:linear-gradient(145deg,rgba(17,29,43,.98),rgba(7,13,22,.98));
+            border:2px solid #536779; border-radius:14px; box-shadow:0 0 40px #000b;
+        }
+        .lobby-top {display:flex;justify-content:space-between;align-items:center;gap:12px;border-bottom:1px solid #405466;padding-bottom:14px}
+        .lobby-top h2 {margin:0;color:#8cecff;letter-spacing:3px}
+        .lobby-code {color:#a5ffb4;font-weight:bold;font-size:18px}
+        .lobby-grid {display:grid;grid-template-columns:1.25fr .85fr;gap:18px;margin-top:18px}
+        .lobby-panel {background:#111d2b;border:1px solid #354b60;border-radius:10px;padding:16px}
+        .lobby-panel h3 {margin:0 0 12px;color:#ffdf9a;font-size:14px;letter-spacing:2px}
+        #lobby-scene {height:265px;position:relative;overflow:hidden;border-radius:8px;
+            background:radial-gradient(ellipse at 50% 75%,#304b5b 0%,#172b3a 48%,#09131e 100%);
+            border:1px solid #536779}
+        #lobby-scene:before {content:"";position:absolute;left:8%;right:8%;bottom:-35px;height:125px;
+            border:10px solid #607b8e;border-bottom:0;border-radius:50% 50% 0 0;
+            background:linear-gradient(#294355,#142433)}
+        .lobby-window {position:absolute;top:28px;width:54px;height:78px;border:5px solid #6e8798;
+            border-radius:50%;background:linear-gradient(145deg,#a5efff,#24577a 55%,#101d32);box-shadow:0 0 18px #5bdcff66}
+        .lobby-window.one{left:15%}.lobby-window.two{left:calc(50% - 27px)}.lobby-window.three{right:15%}
+        .lobby-console {position:absolute;bottom:30px;left:50%;transform:translateX(-50%);width:120px;height:48px;
+            border:4px solid #61798a;border-radius:8px;background:linear-gradient(#3e6578,#172e40);box-shadow:0 0 18px #3ac8ff44}
+        .lobby-console:after {content:"";display:block;width:65%;height:5px;margin:12px auto;background:#65eaff;box-shadow:0 0 10px #65eaff}
+        .lobby-crew {position:absolute;bottom:75px;left:50%;display:flex;gap:20px;transform:translateX(-50%)}
+        .lobby-crew span {width:27px;height:34px;border:3px solid #101820;border-radius:12px 12px 8px 8px;
+            box-shadow:inset -5px -2px #0003;position:relative}
+        .lobby-crew span:before {content:"";position:absolute;right:-9px;top:8px;width:8px;height:19px;background:inherit;border-radius:4px}
+        .lobby-crew span:after {content:"";position:absolute;left:5px;top:6px;width:14px;height:8px;border-radius:8px;background:#b9f4ff;border:2px solid #263b4c}
+        #lobby-players {display:grid;gap:8px}
+        .lobby-player {display:flex;align-items:center;gap:10px;background:#1b2b3b;padding:9px 11px;border-radius:7px;border:1px solid #344b60}
+        .player-dot {width:14px;height:14px;border-radius:50%;border:2px solid #d6e4ec}
+        .lobby-player small {margin-left:auto;color:#91a8b8}
+        .lobby-hint {color:#9db2c1;font-size:12px;line-height:1.5;margin-top:12px}
+        .lobby-actions {display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:18px}
+        .lobby-start {background:#27a85b;color:white;border:0;border-radius:6px;padding:13px 26px;font-weight:bold;cursor:pointer}
+        .lobby-start:hover{background:#32c96c}.lobby-back{background:#344657;color:white;border:1px solid #64798b;border-radius:6px;padding:11px 18px;cursor:pointer}
+        @media(max-width:650px){#lobby-screen{padding:14px}.lobby-grid{grid-template-columns:1fr}.lobby-top{align-items:flex-start;flex-direction:column}#lobby-scene{height:190px}}
+
     </style>
     <!-- Include PeerJS Cloud Library -->
     <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
@@ -152,6 +192,39 @@
             <button class="btn-main" style="background: #555;" onclick="startPractice()">LOCAL PRACTICE (BOTS)</button>
         </div>
         <div id="menu-status" style="color: #ff3333; font-size: 14px; min-height: 20px;"></div>
+    </div>
+
+
+    <div id="lobby-screen">
+        <div class="lobby-top">
+            <div><h2>SPACESHIP LOBBY</h2><div style="color:#9db2c1;font-size:12px;margin-top:5px">CREW ASSEMBLY DECK · DEPARTURE BAY</div></div>
+            <div class="lobby-code" id="lobby-code">ROOM: LOCAL</div>
+        </div>
+        <div class="lobby-grid">
+            <section class="lobby-panel">
+                <h3>WAITING ROOM</h3>
+                <div id="lobby-scene">
+                    <i class="lobby-window one"></i><i class="lobby-window two"></i><i class="lobby-window three"></i>
+                    <div class="lobby-crew"><span style="background:#00adb5"></span><span style="background:#ff5555"></span><span style="background:#e6c84f"></span></div>
+                    <div class="lobby-console"></div>
+                </div>
+                <div class="lobby-hint">Crewmates gather here before launch. Check your crew list, then start the round when everyone is ready.</div>
+            </section>
+            <section class="lobby-panel">
+                <h3>CREW MANIFEST <span id="lobby-count" style="float:right;color:#8cecff">1 / 2</span></h3>
+                <div id="lobby-players"></div>
+                <div class="lobby-hint" id="lobby-status">Waiting for another crewmate to connect…</div>
+                <h3 style="margin-top:22px">SELECTED MAP</h3>
+                <div style="padding:12px;background:#1b2b3b;border-radius:7px;border:1px solid #344b60">
+                    <strong style="color:#8cecff">THE ORBITAL</strong><br>
+                    <small style="color:#9db2c1">7 sectors · central hub · maintenance routes</small>
+                </div>
+            </section>
+        </div>
+        <div class="lobby-actions">
+            <button class="lobby-back" onclick="leaveLobby()">← BACK TO MENU</button>
+            <button class="lobby-start" onclick="launchFromLobby()">START GAME ▶</button>
+        </div>
     </div>
 
     <!-- GAME WINDOW SCREEN -->
@@ -200,10 +273,23 @@
 
         // Environment configuration
         const rooms = [
-            { name: "Upper Engine", x: 60, y: 60, w: 180, h: 140, color: "#1f2833", taskX: 150, taskY: 90, taskDone: false, taskProgress: 0 },
-            { name: "Admin", x: 500, y: 280, w: 220, h: 150, color: "#232b38", taskX: 610, taskY: 350, taskDone: false, taskProgress: 0 },
-            { name: "Electrical", x: 260, y: 240, w: 180, h: 180, color: "#192229", taskX: 350, taskY: 330, taskDone: false, taskProgress: 0 }
+            { name: "Upper Engine", x: 35, y: 35, w: 175, h: 112, color: "#263746", taskX: 85, taskY: 83, taskDone: false, taskProgress: 0 },
+            { name: "MedBay", x: 265, y: 35, w: 155, h: 112, color: "#24404a" },
+            { name: "Security", x: 610, y: 35, w: 155, h: 112, color: "#293548" },
+            { name: "Cafeteria", x: 285, y: 185, w: 235, h: 130, color: "#3b3c43" },
+            { name: "Electrical", x: 35, y: 330, w: 175, h: 135, color: "#253b42", taskX: 115, taskY: 395, taskDone: false, taskProgress: 0 },
+            { name: "Storage", x: 285, y: 365, w: 155, h: 100, color: "#3b342b" },
+            { name: "Admin", x: 565, y: 330, w: 200, h: 135, color: "#293b4a", taskX: 665, taskY: 395, taskDone: false, taskProgress: 0 }
         ];
+        const corridors = [
+            [122,147,122,260],[210,90,265,90],[420,90,610,90],
+            [342,147,342,185],[520,250,685,250],[122,260,122,330],
+            [210,395,285,415],[440,415,565,395],[685,147,685,330],
+            [402,315,402,365]
+        ];
+        const decor = Array.from({length:34}, (_,i) => ({
+            x: 18 + (i*71)%760, y: 18 + (i*43)%460, r: 1 + (i%3)
+        }));
 
         // Player models
         const localPlayer = { x: 400, y: 120, radius: 16, speed: 4, color: '#00adb5', visorColor: '#a6e3e9', facingLeft: false, name: 'Player', role: 'crewmate' };
@@ -222,8 +308,46 @@
             return code;
         }
 
+        function showLobby() {
+            document.getElementById('menu-screen').style.display = 'none';
+            document.getElementById('game-screen').style.display = 'none';
+            document.getElementById('lobby-screen').style.display = 'block';
+            document.getElementById('lobby-code').innerText = document.getElementById('lobby-id-display').innerText;
+            refreshLobbyPlayers();
+        }
+
+        function refreshLobbyPlayers() {
+            const players = [{name:localPlayer.name || 'Crewmate', color:localPlayer.color || '#00adb5', host:isHost}];
+            if (remotePlayer.active) players.push({name:remotePlayer.name, color:remotePlayer.color, host:false});
+            document.getElementById('lobby-count').innerText = players.length + ' / 2';
+            document.getElementById('lobby-players').innerHTML = players.map((p,i) =>
+                '<div class="lobby-player"><span class="player-dot" style="background:'+p.color+'"></span><strong>'+escapeLobbyText(p.name)+'</strong><small>'+(p.host?'HOST':'CREWMATE')+'</small></div>'
+            ).join('');
+            document.getElementById('lobby-status').innerText = remotePlayer.active ? 'Crew assembled. Ready for launch!' : (isPractice ? 'Practice session ready. The AI imposter is standing by.' : 'Waiting for another crewmate to connect…');
+        }
+
+        function escapeLobbyText(value) {
+            return String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        }
+
+        function leaveLobby() {
+            if (peer) { peer.destroy(); peer = null; }
+            isMultiplayer = false; isHost = false; isPractice = false; gameActive = false;
+            remotePlayer.active = false;
+            document.getElementById('lobby-screen').style.display = 'none';
+            document.getElementById('menu-screen').style.display = 'block';
+        }
+
+        function launchFromLobby() {
+            document.getElementById('lobby-screen').style.display = 'none';
+            initGameUI();
+            gameActive = true;
+            statusMsg.innerText = isPractice ? 'Practice mode active with AI Imposter.' : 'Crew launched. Complete your tasks!';
+        }
+
         function initGameUI() {
             document.getElementById('menu-screen').style.display = 'none';
+            document.getElementById('lobby-screen').style.display = 'none';
             document.getElementById('game-screen').style.display = 'flex';
             if (localPlayer.role === 'imposter') {
                 document.getElementById('role-title').innerText = "ROLE: IMPOSTER (ELIMINATE CREW)";
@@ -244,9 +368,8 @@
             remotePlayer.targetRoom = 0;
             remotePlayer.timer = 0;
             
-            initGameUI();
-            statusMsg.innerText = "Practice mode active with AI Bot.";
-            gameActive = true;
+            document.getElementById('lobby-id-display').innerText = 'ROOM: PRACTICE';
+            showLobby();
         }
 
         function hostGame() {
@@ -264,7 +387,8 @@
                 document.getElementById('host-code-display').innerText = "ROOM CODE: " + code;
                 document.getElementById('lobby-id-display').innerText = "ROOM: " + code;
                 document.getElementById('menu-status').innerText = "";
-                initGameUI();
+                document.getElementById('lobby-id-display').innerText = "ROOM: " + code;
+                showLobby();
                 statusMsg.innerText = "Waiting for an opponent to input code...";
             });
 
@@ -299,9 +423,8 @@
                     remotePlayer.color = '#00adb5';
                     document.getElementById('lobby-id-display').innerText = "ROOM: " + code;
                     setupDataChannels();
-                    initGameUI();
-                    statusMsg.innerText = "Synchronized to master transmission frame. Game Live!";
-                    gameActive = true;
+                    showLobby();
+                    statusMsg.innerText = "Connected to room. Waiting in lobby.";
                     
                     // Transmit handshake profile frame data block
                     conn.send({ type: 'handshake', name: localPlayer.name });
@@ -318,14 +441,15 @@
                 if (data.type === 'handshake') {
                     remotePlayer.name = data.name;
                     remotePlayer.active = true;
-                    statusMsg.innerText = remotePlayer.name + " connected. Match Initialized!";
-                    gameActive = true;
+                    statusMsg.innerText = remotePlayer.name + " connected. Ready in lobby!";
+                    refreshLobbyPlayers();
                     // Echo response profile framing values back to node
                     conn.send({ type: 'handshake-reply', name: localPlayer.name });
                 }
                 else if (data.type === 'handshake-reply') {
                     remotePlayer.name = data.name;
                     remotePlayer.active = true;
+                    refreshLobbyPlayers();
                 }
                 else if (data.type === 'sync') {
                     remotePlayer.x = data.x;
@@ -492,48 +616,61 @@
             }
         }
 
+        function drawRoom(room) {
+            const x=room.x,y=room.y,w=room.w,h=room.h;
+            ctx.save();
+            ctx.shadowColor='#000';ctx.shadowBlur=12;ctx.shadowOffsetY=5;
+            ctx.fillStyle=room.color;ctx.fillRect(x,y,w,h);
+            ctx.shadowBlur=0;ctx.shadowOffsetY=0;
+            ctx.strokeStyle='#70889a';ctx.lineWidth=4;ctx.strokeRect(x,y,w,h);
+            ctx.strokeStyle='rgba(160,210,230,.15)';ctx.lineWidth=1;
+            for(let gx=x+18;gx<x+w-8;gx+=28){ctx.beginPath();ctx.moveTo(gx,y+8);ctx.lineTo(gx,y+h-8);ctx.stroke();}
+            ctx.fillStyle='#d4e7ef';ctx.font='bold 13px "Courier New"';ctx.fillText(room.name.toUpperCase(),x+10,y+19);
+            ctx.fillStyle='rgba(4,10,17,.35)';ctx.fillRect(x+8,y+27,w-16,h-35);
+            if(room.name==='Cafeteria'){
+                for(let i=0;i<3;i++){ctx.fillStyle='#8296a2';ctx.beginPath();ctx.ellipse(x+55+i*62,y+76,23,13,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#344a59';ctx.fillRect(x+34+i*62,y+71,42,10);}
+            } else if(room.name==='MedBay'){
+                ctx.fillStyle='#9ad8df';ctx.fillRect(x+28,y+54,82,17);ctx.fillStyle='#d9f4f2';ctx.fillRect(x+34,y+49,70,8);
+            } else if(room.name==='Security'){
+                for(let i=0;i<3;i++){ctx.fillStyle='#142331';ctx.fillRect(x+15+i*42,y+48,34,25);ctx.fillStyle='#60d9e8';ctx.fillRect(x+19+i*42,y+52,26,15);}
+            } else if(room.name==='Storage'){
+                for(let i=0;i<3;i++){ctx.fillStyle='#987b51';ctx.fillRect(x+18+i*39,y+47,28,30);ctx.strokeStyle='#d0b17a';ctx.strokeRect(x+18+i*39,y+47,28,30);}
+            } else if(room.name==='Electrical'){
+                for(let i=0;i<3;i++){ctx.fillStyle='#c3a65d';ctx.fillRect(x+20+i*42,y+47,25,35);ctx.fillStyle='#202c35';ctx.fillRect(x+24+i*42,y+52,17,12);}
+            } else if(room.name==='Admin'){
+                ctx.fillStyle='#6da9b7';ctx.fillRect(x+55,y+55,70,28);ctx.fillStyle='#b4eaf0';ctx.fillRect(x+61,y+59,58,16);
+            } else if(room.name==='Upper Engine'){
+                ctx.fillStyle='#b18c59';ctx.beginPath();ctx.ellipse(x+130,y+72,17,40,0,0,Math.PI*2);ctx.fill();
+            }
+            if(room.taskX !== undefined){
+                const pulse=Math.sin(Date.now()/150)*3;
+                ctx.fillStyle=room.taskDone?'#5ff27e':'#ffeba7';ctx.beginPath();ctx.arc(room.taskX,room.taskY,room.taskDone?5:6+pulse,0,Math.PI*2);ctx.fill();
+                if(!room.taskDone){ctx.strokeStyle='#ffeba7';ctx.globalAlpha=.45;ctx.beginPath();ctx.arc(room.taskX,room.taskY,13+pulse,0,Math.PI*2);ctx.stroke();}
+            }
+            ctx.restore();
+        }
+
         function render() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = '#ffffff';
-            stars.forEach(s => ctx.fillRect(s.x, s.y, s.size, s.size));
-
-            ctx.strokeStyle = '#2c3540'; ctx.lineWidth = 14;
-            ctx.beginPath(); ctx.moveTo(150, 130); ctx.lineTo(350, 330); ctx.lineTo(610, 350); ctx.stroke();
-
-            rooms.forEach(room => {
-                ctx.fillStyle = room.color; ctx.fillRect(room.x, room.y, room.w, room.h);
-                ctx.strokeStyle = '#4e5d6c'; ctx.lineWidth = 3; ctx.strokeRect(room.x, room.y, room.w, room.h);
-
-                ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.font = '16px "Courier New"';
-                ctx.fillText(room.name, room.x + 10, room.y + 25);
-
-                if(!room.taskDone) {
-                    let pulse = Math.sin(Date.now() / 150) * 4;
-                    ctx.fillStyle = '#ffeba7'; ctx.beginPath(); ctx.arc(room.taskX, room.taskY, 6 + pulse, 0, 2*Math.PI); ctx.fill();
-                } else {
-                    ctx.fillStyle = '#5ff27e'; ctx.beginPath(); ctx.arc(room.taskX, room.taskY, 5, 0, 2*Math.PI); ctx.fill();
-                }
-            });
-
-            if (remotePlayer.active) {
-                drawCrewmate(ctx, remotePlayer.x, remotePlayer.y, remotePlayer.color, remotePlayer.visorColor, remotePlayer.facingLeft, remotePlayer.name);
-            }
-            drawCrewmate(ctx, localPlayer.x, localPlayer.y, localPlayer.color, localPlayer.visorColor, localPlayer.facingLeft, localPlayer.name);
-
-            // Radar display matrices
-            ctx.fillStyle = 'rgba(10, 15, 20, 0.85)'; ctx.fillRect(650, 15, 135, 95);
-            ctx.strokeStyle = '#3a4750'; ctx.strokeRect(650, 15, 135, 95);
-            
-            let miniX = 650 + (localPlayer.x / canvas.width) * 120 + 7;
-            let miniY = 15 + (localPlayer.y / canvas.height) * 80 + 7;
-            ctx.fillStyle = localPlayer.color; ctx.beginPath(); ctx.arc(miniX, miniY, 3, 0, 2*Math.PI); ctx.fill();
-
-            if (remotePlayer.active) {
-                let impX = 650 + (remotePlayer.x / canvas.width) * 120 + 7;
-                let impY = 15 + (remotePlayer.y / canvas.height) * 80 + 7;
-                ctx.fillStyle = remotePlayer.color; ctx.beginPath(); ctx.arc(impX, impY, 3, 0, 2*Math.PI); ctx.fill();
-            }
-            ctx.fillStyle = '#ffffff'; ctx.font = '10px sans-serif'; ctx.fillText("RADAR MAP", 655, 27);
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+            const bg=ctx.createLinearGradient(0,0,0,canvas.height);bg.addColorStop(0,'#101c2a');bg.addColorStop(1,'#050a12');ctx.fillStyle=bg;ctx.fillRect(0,0,canvas.width,canvas.height);
+            decor.forEach(d=>{ctx.fillStyle='rgba(130,190,220,.18)';ctx.beginPath();ctx.arc(d.x,d.y,d.r,0,Math.PI*2);ctx.fill();});
+            // Metallic corridor network behind the rooms.
+            ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle='#101d29';ctx.lineWidth=42;
+            corridors.forEach(c=>{ctx.beginPath();ctx.moveTo(c[0],c[1]);ctx.lineTo(c[2],c[3]);ctx.stroke();});
+            ctx.strokeStyle='#40596a';ctx.lineWidth=3;
+            corridors.forEach(c=>{ctx.beginPath();ctx.moveTo(c[0],c[1]);ctx.lineTo(c[2],c[3]);ctx.stroke();});
+            rooms.forEach(drawRoom);
+            // Corridor floor lights.
+            [[122,230],[342,165],[520,250],[485,415],[685,240]].forEach(p=>{ctx.fillStyle='#4ed9e8';ctx.globalAlpha=.55;ctx.fillRect(p[0]-5,p[1]-2,10,4);});ctx.globalAlpha=1;
+            if(remotePlayer.active) drawCrewmate(ctx,remotePlayer.x,remotePlayer.y,remotePlayer.color,remotePlayer.visorColor,remotePlayer.facingLeft,remotePlayer.name);
+            drawCrewmate(ctx,localPlayer.x,localPlayer.y,localPlayer.color,localPlayer.visorColor,localPlayer.facingLeft,localPlayer.name);
+            // Compact radar.
+            ctx.fillStyle='rgba(5,12,20,.9)';ctx.fillRect(650,15,135,95);ctx.strokeStyle='#597184';ctx.strokeRect(650,15,135,95);
+            ctx.fillStyle='#d8edf4';ctx.font='10px sans-serif';ctx.fillText('SHIP RADAR',658,27);
+            rooms.forEach(r=>{ctx.fillStyle='#688395';ctx.fillRect(650+r.x/800*120,32+r.y/500*70,Math.max(2,r.w/800*120),Math.max(2,r.h/500*70));});
+            let miniX=650+(localPlayer.x/canvas.width)*120+7,miniY=15+(localPlayer.y/canvas.height)*80+7;
+            ctx.fillStyle=localPlayer.color;ctx.beginPath();ctx.arc(miniX,miniY,3,0,2*Math.PI);ctx.fill();
+            if(remotePlayer.active){let impX=650+(remotePlayer.x/canvas.width)*120+7,impY=15+(remotePlayer.y/canvas.height)*80+7;ctx.fillStyle=remotePlayer.color;ctx.beginPath();ctx.arc(impX,impY,3,0,2*Math.PI);ctx.fill();}
         }
 
         function gameLoop() {
