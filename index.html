@@ -481,7 +481,7 @@
                 }
                 else if(data.type==='meeting'){openMeeting(data.caller);}
                 else if(data.type==='vote'){receiveVote(data.vote);}
-                else if(data.type==='sabotage'){activeSabotage=data.kind;sabotageUntil=Date.now()+30000;}
+                else if(data.type==='sabotage'){if(data.kind==="fixed"){activeSabotage="";statusMsg.innerText="Sabotage repaired!";}else{activeSabotage=data.kind;sabotageUntil=Date.now()+30000;}}
                 else if(data.type==='chat'){statusMsg.innerText=remotePlayer.name+': '+data.message;}
             });
         }
@@ -720,6 +720,10 @@
         function nearestVent(){let best=null,dist=1e9;rooms.forEach((r,i)=>{const x=r.x+17,y=r.y+r.h-14,d=Math.hypot(localPlayer.x-x,localPlayer.y-y);if(d<dist){dist=d;best={x,y,i};}});return dist<34?best:null;}
         function triggerAction(){
           if(!gameActive)return;
+          if(localPlayer.role==="crewmate"&&activeSabotage){
+            const repairRoom=rooms.find(r=>Math.hypot(localPlayer.x-(r.x+r.w/2),localPlayer.y-(r.y+r.h/2))<85);
+            if(repairRoom){activeSabotage="";if(isMultiplayer&&conn&&conn.open)conn.send({type:"sabotage",kind:"fixed"});statusMsg.innerText="Sabotage repaired in "+repairRoom.name+"!";return;}
+          }
           if(localPlayer.role==="imposter"){
             if(Date.now()<killReadyAt){statusMsg.innerText="Kill cooldown: "+Math.ceil((killReadyAt-Date.now())/1000)+"s";return;}
             if(remotePlayer.active&&!remotePlayer.dead&&Math.hypot(localPlayer.x-remotePlayer.x,localPlayer.y-remotePlayer.y)<48){
