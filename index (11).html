@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Space Imposter Multiplayer</title>
+    <style>
+        body {
+            margin: 0;
+            background-color: #0b0e14;
+            color: #ffffff;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+            user-select: none;
+        }
+        #menu-screen {
+            background: rgba(20, 25, 35, 0.95);
+            padding: 30px;
+            border: 3px solid #3a4750;
+            border-radius: 8px;
+            width: 400px;
+            text-align: center;
+            box-shadow: 0 0 25px rgba(0,0,0,0.7);
+        }
+        .menu-input {
+            width: 80%;
+            padding: 10px;
+            margin: 10px 0;
+            background: #151a22;
+            border: 2px solid #3a4750;
+            color: #fff;
+            font-family: monospace;
+            font-size: 16px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .btn-main {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 4px;
+            font-weight: bold;
+            margin: 8px;
+            width: 85%;
+            text-transform: uppercase;
+        }
+        .btn-main:hover { background: #218838; }
+        .btn-sec { background: #00adb5; }
+        .btn-sec:hover { background: #008f96; }
+        #game-screen {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+        }
+        #ui-container {
+            width: 800px;
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            background: rgba(20, 25, 35, 0.8);
+            padding: 10px;
+            border: 2px solid #3a4750;
+            border-radius: 4px;
+        }
+        .task-list {
+            font-size: 14px;
+            color: #5ff27e;
+        }
+        .task-item.done {
+            text-decoration: line-through;
+            color: #888888;
+        }
+        #game-wrapper {
+            position: relative;
+            width: 800px;
+            height: 500px;
+            border: 4px solid #3a4750;
+            border-radius: 6px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+        }
+        canvas {
+            background-color: #05070a;
+            display: block;
+        }
+        #action-btn {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #ff3333 0%, #990000 100%);
+            border: 3px solid #ffffff;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-transform: uppercase;
+        }
+        #kill-screen {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #990000;
+            color: white;
+            font-size: 40px;
+            font-weight: bold;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9;
+            letter-spacing: 4px;
+        }
+        #status-msg {
+            color: #ffeba7;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+    </style>
+    <!-- Include PeerJS Cloud Library -->
+    <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+</head>
+<body>
+
+    <!-- MAIN MENU SCREEN -->
+    <div id="menu-screen">
+        <h1 style="color: #ff3333; margin: 0 0 20px 0; letter-spacing: 2px;">SPACE IMPOSTER</h1>
+        <input type="text" id="username-input" class="menu-input" placeholder="ENTER NAME" maxlength="10" value="Crewmate">
+        
+        <div style="margin: 20px 0; border-top: 1px solid #3a4750; padding-top: 15px;">
+            <button class="btn-main" onclick="hostGame()">HOST ONLINE GAME</button>
+            <div id="host-code-display" style="margin-top: 5px; color: #5ff27e; font-weight: bold;"></div>
+        </div>
+
+        <div style="margin: 20px 0; border-top: 1px solid #3a4750; padding-top: 15px;">
+            <input type="text" id="join-code-input" class="menu-input" placeholder="ENTER 5-CHAR CODE" maxlength="5" style="text-transform: uppercase;">
+            <button class="btn-main btn-sec" onclick="joinGame()">JOIN ONLINE GAME</button>
+        </div>
+
+        <div style="margin: 20px 0; border-top: 1px solid #3a4750; padding-top: 15px;">
+            <button class="btn-main" style="background: #555;" onclick="startPractice()">LOCAL PRACTICE (BOTS)</button>
+        </div>
+        <div id="menu-status" style="color: #ff3333; font-size: 14px; min-height: 20px;"></div>
+    </div>
+
+    <!-- GAME WINDOW SCREEN -->
+    <div id="game-screen">
+        <div id="ui-container">
+            <div class="task-list">
+                <strong id="role-title">ROLE: CREWMATE</strong>
+                <div id="task-0" class="task-item">• Calibrate Upper Engine (0%)</div>
+                <div id="task-1" class="task-item">• Swipe Card in Admin (0%)</div>
+                <div id="task-2" class="task-item">• Fix Wiring in Electrical (0%)</div>
+            </div>
+            <div style="text-align: right; color: #00adb5; font-size: 14px;">
+                <strong id="lobby-id-display">ROOM: LOCAL</strong><br>
+                <span style="color: #ffeba7">WASD/Arrows to Move | Space/E to Interact</span>
+                <div id="status-msg">Waiting for players...</div>
+            </div>
+        </div>
+
+        <div id="game-wrapper">
+            <canvas id="gameCanvas" width="800" height="500"></canvas>
+            <div id="action-btn" onclick="triggerAction()">USE</div>
+            <div id="kill-screen">SHHH! ELIMINATED</div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const actionBtn = document.getElementById('action-btn');
+        const killScreen = document.getElementById('kill-screen');
+        const statusMsg = document.getElementById('status-msg');
+
+        let isMultiplayer = false;
+        let isHost = false;
+        let isPractice = false;
+        let myId = '';
+        let peer = null;
+        let conn = null;
+
+        let gameActive = false;
+        let keys = {};
+
+        // Stars array
+        const stars = [];
+        for(let i=0; i<60; i++) stars.push({x: Math.random() * canvas.width, y: Math.random() * canvas.height, size: Math.random() * 2});
+
+        // Environment configuration
+        const rooms = [
+            { name: "Upper Engine", x: 60, y: 60, w: 180, h: 140, color: "#1f2833", taskX: 150, taskY: 90, taskDone: false, taskProgress: 0 },
+            { name: "Admin", x: 500, y: 280, w: 220, h: 150, color: "#232b38", taskX: 610, taskY: 350, taskDone: false, taskProgress: 0 },
+            { name: "Electrical", x: 260, y: 240, w: 180, h: 180, color: "#192229", taskX: 350, taskY: 330, taskDone: false, taskProgress: 0 }
+        ];
+
+        // Player models
+        const localPlayer = { x: 400, y: 120, radius: 16, speed: 4, color: '#00adb5', visorColor: '#a6e3e9', facingLeft: false, name: 'Player', role: 'crewmate' };
+        const remotePlayer = { x: 100, y: 400, radius: 16, color: '#ff3333', visorColor: '#a6e3e9', facingLeft: false, name: 'Waiting...', role: 'imposter', active: false };
+
+        window.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
+        window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+
+        // Generates short 5-character string room identifier code
+        function generateShortCode() {
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // No confusing chars like O, I, 1, 0
+            let code = '';
+            for (let i = 0; i < 5; i++) {
+                code += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return code;
+        }
+
+        function initGameUI() {
+            document.getElementById('menu-screen').style.display = 'none';
+            document.getElementById('game-screen').style.display = 'flex';
+            if (localPlayer.role === 'imposter') {
+                document.getElementById('role-title').innerText = "ROLE: IMPOSTER (ELIMINATE CREW)";
+                document.getElementById('role-title').style.color = "#ff3333";
+                actionBtn.innerText = "KILL";
+            }
+        }
+
+        function startPractice() {
+            isPractice = true;
+            localPlayer.name = document.getElementById('username-input').value || 'Crewmate';
+            localPlayer.role = 'crewmate';
+            remotePlayer.name = 'Imposter Bot';
+            remotePlayer.role = 'imposter';
+            remotePlayer.color = '#ff3333';
+            remotePlayer.active = true;
+            remotePlayer.state = 'patrol';
+            remotePlayer.targetRoom = 0;
+            remotePlayer.timer = 0;
+            
+            initGameUI();
+            statusMsg.innerText = "Practice mode active with AI Bot.";
+            gameActive = true;
+        }
+
+        function hostGame() {
+            const code = generateShortCode();
+            localPlayer.name = document.getElementById('username-input').value || 'Host';
+            document.getElementById('menu-status').innerText = "Initializing connections network server...";
+
+            // Create Peer instance with short string suffix mapping logic
+            peer = new Peer('SI-' + code);
+
+            peer.on('open', (id) => {
+                isMultiplayer = true;
+                isHost = true;
+                localPlayer.role = 'crewmate'; // Host default assignment configuration
+                document.getElementById('host-code-display').innerText = "ROOM CODE: " + code;
+                document.getElementById('lobby-id-display').innerText = "ROOM: " + code;
+                document.getElementById('menu-status').innerText = "";
+                initGameUI();
+                statusMsg.innerText = "Waiting for an opponent to input code...";
+            });
+
+            peer.on('connection', (connection) => {
+                conn = connection;
+                setupDataChannels();
+            });
+
+            peer.on('error', (err) => {
+                document.getElementById('menu-status').innerText = "Server Error: Room structure allocation anomaly. Try again.";
+                console.error(err);
+            });
+        }
+
+        function joinGame() {
+            const code = document.getElementById('join-code-input').value.trim().toUpperCase();
+            if (code.length !== 5) {
+                document.getElementById('menu-status').innerText = "Error: Input must be exactly 5 alphanumeric variables.";
+                return;
+            }
+            localPlayer.name = document.getElementById('username-input').value || 'Guest';
+            document.getElementById('menu-status').innerText = "Hailing network room: " + code;
+
+            peer = new Peer();
+            peer.on('open', (id) => {
+                conn = peer.connect('SI-' + code);
+                conn.on('open', () => {
+                    isMultiplayer = true;
+                    isHost = false;
+                    localPlayer.role = 'imposter'; // Joining player defaults to tracker imposter
+                    localPlayer.color = '#ff3333';
+                    remotePlayer.color = '#00adb5';
+                    document.getElementById('lobby-id-display').innerText = "ROOM: " + code;
+                    setupDataChannels();
+                    initGameUI();
+                    statusMsg.innerText = "Synchronized to master transmission frame. Game Live!";
+                    gameActive = true;
+                    
+                    // Transmit handshake profile frame data block
+                    conn.send({ type: 'handshake', name: localPlayer.name });
+                });
+            });
+
+            peer.on('error', (err) => {
+                document.getElementById('menu-status').innerText = "Error connecting: Room not found.";
+            });
+        }
+
+        function setupDataChannels() {
+            conn.on('data', (data) => {
+                if (data.type === 'handshake') {
+                    remotePlayer.name = data.name;
+                    remotePlayer.active = true;
+                    statusMsg.innerText = remotePlayer.name + " connected. Match Initialized!";
+                    gameActive = true;
+                    // Echo response profile framing values back to node
+                    conn.send({ type: 'handshake-reply', name: localPlayer.name });
+                }
+                else if (data.type === 'handshake-reply') {
+                    remotePlayer.name = data.name;
+                    remotePlayer.active = true;
+                }
+                else if (data.type === 'sync') {
+                    remotePlayer.x = data.x;
+                    remotePlayer.y = data.y;
+                    remotePlayer.facingLeft = data.facingLeft;
+                }
+                else if (data.type === 'task') {
+                    rooms[data.idx].taskProgress = data.progress;
+                    rooms[data.idx].taskDone = data.done;
+                    let el = document.getElementById(`task-${data.idx}`);
+                    if (data.done) el.classList.add('done');
+                    el.innerText = `• ${data.idx==0?'Calibrate Upper Engine':data.idx==1?'Swipe Card in Admin':'Fix Wiring in Electrical'} (${Math.floor(data.progress)}%)`;
+                }
+                else if (data.type === 'kill') {
+                    triggerKillSequence();
+                }
+            });
+        }
+
+        function broadcastPlayerState() {
+            if (isMultiplayer && conn && conn.open) {
+                conn.send({
+                    type: 'sync',
+                    x: localPlayer.x,
+                    y: localPlayer.y,
+                    facingLeft: localPlayer.facingLeft
+                });
+            }
+        }
+
+        function triggerAction() {
+            if (!gameActive) return;
+
+            if (localPlayer.role === 'imposter') {
+                // Tactical target execution calculation check
+                if (remotePlayer.active) {
+                    let d = Math.hypot(localPlayer.x - remotePlayer.x, localPlayer.y - remotePlayer.y);
+                    if (d < 45) {
+                        if (isMultiplayer && conn && conn.open) conn.send({ type: 'kill' });
+                        statusMsg.innerText = "Target Eliminated! Victory Achieved.";
+                        gameActive = false;
+                    }
+                }
+            }
+        }
+
+        function triggerKillSequence() {
+            gameActive = false;
+            killScreen.style.display = 'flex';
+            statusMsg.innerText = "Eliminated by the rogue entity.";
+        }
+
+        function drawCrewmate(cCtx, x, y, baseColor, visorColor, isLeft, nameTag) {
+            cCtx.save();
+            // Name Tag Rendering
+            cCtx.fillStyle = '#ffffff';
+            cCtx.font = '12px "Courier New"';
+            cCtx.textAlign = 'center';
+            cCtx.fillText(nameTag, x, y - 18);
+
+            // Backpack component frame layout
+            cCtx.fillStyle = baseColor;
+            if(isLeft) cCtx.fillRect(x + 6, y - 10, 8, 20);
+            else cCtx.fillRect(x - 14, y - 10, 8, 20);
+
+            // Core Frame Volume Hull
+            cCtx.beginPath();
+            cCtx.arc(x, y - 4, 12, Math.PI, 0, false);
+            cCtx.lineTo(x + 12, y + 12); cCtx.lineTo(x - 12, y + 12);
+            cCtx.closePath(); cCtx.fill();
+
+            // Ground locomotion units allocation
+            cCtx.fillRect(x - 12, y + 10, 7, 6);
+            cCtx.fillRect(x + 5, y + 10, 7, 6);
+
+            // Structural visor element segment array map matrix
+            cCtx.fillStyle = visorColor;
+            cCtx.beginPath();
+            if(isLeft) cCtx.ellipse(x - 8, y - 4, 7, 5, 0, 0, 2 * Math.PI);
+            else cCtx.ellipse(x + 8, y - 4, 7, 5, 0, 0, 2 * Math.PI);
+            cCtx.fill();
+            cCtx.strokeStyle = '#000';
+            cCtx.lineWidth = 1.5;
+            cCtx.stroke();
+            cCtx.restore();
+        }
+
+        function updateLogic() {
+            if (!gameActive) return;
+
+            let dx = 0; let dy = 0;
+            if (keys['w'] || keys['arrowup']) dy = -localPlayer.speed;
+            if (keys['s'] || keys['arrowdown']) dy = localPlayer.speed;
+            if (keys['a'] || keys['arrowleft']) { dx = -localPlayer.speed; localPlayer.facingLeft = true; }
+            if (keys['d'] || keys['arrowright']) { dx = localPlayer.speed; localPlayer.facingLeft = false; }
+
+            localPlayer.x = Math.max(20, Math.min(canvas.width - 20, localPlayer.x + dx));
+            localPlayer.y = Math.max(20, Math.min(canvas.height - 20, localPlayer.y + dy));
+
+            if (dx !== 0 || dy !== 0) broadcastPlayerState();
+
+            // Bot Routine execution loops configuration
+            if (isPractice && remotePlayer.active) {
+                remotePlayer.timer++;
+                if (remotePlayer.state === 'patrol') {
+                    let tgt = rooms[remotePlayer.targetRoom];
+                    let tX = tgt.x + tgt.w/2; let tY = tgt.y + tgt.h/2;
+                    let angle = Math.atan2(tY - remotePlayer.y, tX - remotePlayer.x);
+                    remotePlayer.x += Math.cos(angle) * 1.8;
+                    remotePlayer.y += Math.sin(angle) * 1.8;
+                    remotePlayer.facingLeft = (Math.cos(angle) < 0);
+
+                    if (Math.hypot(tX - remotePlayer.x, tY - remotePlayer.y) < 20) {
+                        remotePlayer.state = 'waiting'; remotePlayer.timer = 0;
+                    }
+                } else if (remotePlayer.state === 'waiting' && remotePlayer.timer > 90) {
+                    remotePlayer.targetRoom = (remotePlayer.targetRoom + 1) % rooms.length;
+                    remotePlayer.state = 'patrol';
+                }
+
+                if (Math.hypot(localPlayer.x - remotePlayer.x, localPlayer.y - remotePlayer.y) < 35) {
+                    triggerKillSequence();
+                }
+            }
+
+            // Engine structural terminal system interactions execution
+            if (localPlayer.role === 'crewmate') {
+                let nearTask = false;
+                rooms.forEach((room, idx) => {
+                    if (!room.taskDone) {
+                        let distToTask = Math.hypot(localPlayer.x - room.taskX, localPlayer.y - room.taskY);
+                        if (distToTask < 40) {
+                            nearTask = true;
+                            actionBtn.style.background = "radial-gradient(circle, #5ff27e 0%, #1e7e34 100%)";
+                            if (keys[' '] || keys['e']) {
+                                room.taskProgress += 0.8;
+                                if (room.taskProgress >= 100) {
+                                    room.taskProgress = 100; room.taskDone = true;
+                                    document.getElementById(`task-${idx}`).classList.add('done');
+                                }
+                                document.getElementById(`task-${idx}`).innerText = `• ${idx==0?'Calibrate Upper Engine':idx==1?'Swipe Card in Admin':'Fix Wiring in Electrical'} (${Math.floor(room.taskProgress)}%)`;
+                                
+                                if (isMultiplayer && conn && conn.open) {
+                                    conn.send({ type: 'task', idx: idx, progress: room.taskProgress, done: room.taskDone });
+                                }
+                            }
+                        }
+                    }
+                });
+                if (!nearTask) actionBtn.style.background = "radial-gradient(circle, #00adb5 0%, #006b70 100%)";
+            } else {
+                // Imposter visual action cues tracking
+                if (remotePlayer.active && Math.hypot(localPlayer.x - remotePlayer.x, localPlayer.y - remotePlayer.y) < 45) {
+                    actionBtn.style.background = "radial-gradient(circle, #ff3333 0%, #990000 100%)";
+                } else {
+                    actionBtn.style.background = "radial-gradient(circle, #555 0%, #222 100%)";
+                }
+            }
+
+            // Process game completion bounds
+            if (rooms.every(r => r.taskDone)) {
+                gameActive = false;
+                statusMsg.innerText = "All component matrices operational! Crewmate victory achieved.";
+            }
+        }
+
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#ffffff';
+            stars.forEach(s => ctx.fillRect(s.x, s.y, s.size, s.size));
+
+            ctx.strokeStyle = '#2c3540'; ctx.lineWidth = 14;
+            ctx.beginPath(); ctx.moveTo(150, 130); ctx.lineTo(350, 330); ctx.lineTo(610, 350); ctx.stroke();
+
+            rooms.forEach(room => {
+                ctx.fillStyle = room.color; ctx.fillRect(room.x, room.y, room.w, room.h);
+                ctx.strokeStyle = '#4e5d6c'; ctx.lineWidth = 3; ctx.strokeRect(room.x, room.y, room.w, room.h);
+
+                ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.font = '16px "Courier New"';
+                ctx.fillText(room.name, room.x + 10, room.y + 25);
+
+                if(!room.taskDone) {
+                    let pulse = Math.sin(Date.now() / 150) * 4;
+                    ctx.fillStyle = '#ffeba7'; ctx.beginPath(); ctx.arc(room.taskX, room.taskY, 6 + pulse, 0, 2*Math.PI); ctx.fill();
+                } else {
+                    ctx.fillStyle = '#5ff27e'; ctx.beginPath(); ctx.arc(room.taskX, room.taskY, 5, 0, 2*Math.PI); ctx.fill();
+                }
+            });
+
+            if (remotePlayer.active) {
+                drawCrewmate(ctx, remotePlayer.x, remotePlayer.y, remotePlayer.color, remotePlayer.visorColor, remotePlayer.facingLeft, remotePlayer.name);
+            }
+            drawCrewmate(ctx, localPlayer.x, localPlayer.y, localPlayer.color, localPlayer.visorColor, localPlayer.facingLeft, localPlayer.name);
+
+            // Radar display matrices
+            ctx.fillStyle = 'rgba(10, 15, 20, 0.85)'; ctx.fillRect(650, 15, 135, 95);
+            ctx.strokeStyle = '#3a4750'; ctx.strokeRect(650, 15, 135, 95);
+            
+            let miniX = 650 + (localPlayer.x / canvas.width) * 120 + 7;
+            let miniY = 15 + (localPlayer.y / canvas.height) * 80 + 7;
+            ctx.fillStyle = localPlayer.color; ctx.beginPath(); ctx.arc(miniX, miniY, 3, 0, 2*Math.PI); ctx.fill();
+
+            if (remotePlayer.active) {
+                let impX = 650 + (remotePlayer.x / canvas.width) * 120 + 7;
+                let impY = 15 + (remotePlayer.y / canvas.height) * 80 + 7;
+                ctx.fillStyle = remotePlayer.color; ctx.beginPath(); ctx.arc(impX, impY, 3, 0, 2*Math.PI); ctx.fill();
+            }
+            ctx.fillStyle = '#ffffff'; ctx.font = '10px sans-serif'; ctx.fillText("RADAR MAP", 655, 27);
+        }
+
+        function gameLoop() {
+            updateLogic();
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+
+        gameLoop();
+    </script>
+</body>
+</html>
